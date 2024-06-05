@@ -383,7 +383,7 @@ class PayPay():
         self.money_light=balance["payload"]["walletDetail"]["prepaidBalanceInfo"]["balance"]
         self.all_balance=balance["payload"]["walletSummary"]["allTotalBalanceInfo"]["balance"]
         self.useable_balance=balance["payload"]["walletSummary"]["usableBalanceInfoWithoutCashback"]["balance"]
-        self.points=balance["payload"]["walletDetail"]["cashBackBalanceInfo"]["balance"]
+        self.point=balance["payload"]["walletDetail"]["cashBackBalanceInfo"]["balance"]
 
         return balance
 
@@ -747,3 +747,5 @@ class PayPay():
 
         if phistory["header"]["resultCode"] != "S0000":
             raise PayPayError(phistory)
+        
+        return phistory
