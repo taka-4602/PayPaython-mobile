@@ -37,7 +37,7 @@ print(paypay.refresh_token)
 paypay=PayPay(access_token="アクセストークン")
 #ログインをスキップ
 
-paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは2ヶ月と28日で失効するので失効したらリフレッシュしよう
+paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは90日で失効するので失効したらリフレッシュしよう
 print(paypay.access_token)
 print(paypay.refresh_token)
 #↑ここ2つはリフレッシュ後のものを返すようになる
@@ -113,7 +113,7 @@ print(paypay.refresh_token)
 paypay=PayPay(access_token="アクセストークン")
 #ログインをスキップ
 ```
-アクセストークンは2ヵ月と28日 (90日) 有効みたいで、WebAPIの1080倍長持ち！  
+アクセストークンは90日間有効みたいで、WebAPIの1080倍長持ち！  
 そういえばいつのまにか4桁のOTPは廃止になった  
 ### ログインのリフレッシュ
 上記にあるように電話番号、パスワード、デバイスUUIDでログインすることでワンタイムURLなしにログインをリフレッシュできるけど、```token_refresh```を使う方がスマート  
