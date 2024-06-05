@@ -20,7 +20,7 @@ print(paypay.refresh_token)
 paypay=PayPay(access_token="アクセストークン")
 #ログインをスキップ
 
-paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは2ヶ月と28日で失効するので失効したらリフレッシュしよう
+paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは90日経つと失効するので失効したらリフレッシュしよう
 print(paypay.access_token)
 print(paypay.refresh_token)
 #↑ここ2つはリフレッシュ後のものを返すようになる
