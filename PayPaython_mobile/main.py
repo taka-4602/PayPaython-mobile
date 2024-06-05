@@ -327,8 +327,13 @@ class PayPay():
             "tokenVersion": "v2"
         }
         refresh=self.session.post("https://app4.paypay.ne.jp/bff/v2/oauth2/refresh",headers=self.headers,data=refdata,proxies=self.proxy).json()
+
+        if refresh["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(refresh)
+        
         if refresh["header"]["resultCode"] != "S0000":
             raise PayPayError(refresh)
+        
         self.access_token=refresh["payload"]["accessToken"] #2ヶ月と28日もつよ
         self.refresh_token=refresh["payload"]["refreshToken"]
 
@@ -345,6 +350,10 @@ class PayPay():
         if cashback:
             params["orderTypes"] = "CASHBACK"
         history = requests.get(f"https://app4.paypay.ne.jp/bff/v3/getPaymentHistory",params=params,headers=self.headers,proxies=self.proxy).json()
+
+        if history["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(history)
+        
         if history["header"]["resultCode"] != "S0000":
             raise PayPayError(history)
         
@@ -363,6 +372,13 @@ class PayPay():
             "payPayLang": "ja"
         }
         balance=self.session.get("https://app4.paypay.ne.jp/bff/v1/getBalanceInfo",headers=self.headers,params=params,proxies=self.proxy).json()
+
+        if balance["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(balance)
+        
+        if balance["header"]["resultCode"] != "S0000":
+            raise PayPayError(balance)
+        
         self.money=balance["payload"]["walletDetail"]["emoneyBalanceInfo"]["balance"]
         self.money_light=balance["payload"]["walletDetail"]["prepaidBalanceInfo"]["balance"]
         self.all_balance=balance["payload"]["walletSummary"]["allTotalBalanceInfo"]["balance"]
@@ -390,6 +406,9 @@ class PayPay():
                 "payPayLang": "ja"
             }
             link_info=requests.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params).json()
+        
+        if link_info["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(link_info)
         
         if link_info["header"]["resultCode"] != "S0000":
             raise PayPayError(link_info)
@@ -427,10 +446,15 @@ class PayPay():
             "senderChannelUrl": link_info["payload"]["message"]["chatRoomId"],
             "senderMessageId": link_info["payload"]["message"]["messageId"]
         }
+        if link_info["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(link_info)
+        
         if link_info["header"]["resultCode"] != "S0000":
             raise PayPayError(link_info)
+        
         if link_info["payload"]["orderStatus"] != "PENDING":
             raise PayPayError("すでに 受け取り / 辞退 / キャンセル されているリンクです")
+        
         if link_info["payload"]["pendingP2PInfo"]["isSetPasscode"] and password==None:
             raise PayPayError("このリンクにはパスワードが設定されています")
     
@@ -438,6 +462,10 @@ class PayPay():
             payload["passcode"] = password
         
         receive = requests.post("https://app4.paypay.ne.jp/bff/v2/acceptP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+
+        if receive["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(receive)
+        
         if receive["header"]["resultCode"] != "S0000":
             raise PayPayError(receive)
         
@@ -464,15 +492,23 @@ class PayPay():
             "senderChannelUrl": link_info["payload"]["message"]["chatRoomId"],
             "senderMessageId": link_info["payload"]["message"]["messageId"]
         }
+        if link_info["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(link_info)
+
         if link_info["header"]["resultCode"] != "S0000":
             raise PayPayError(link_info)
+        
         if link_info["payload"]["orderStatus"] != "PENDING":
             raise PayPayError("すでに 受け取り / 辞退 / キャンセル されているリンクです")
 
         reject=requests.post("https://app4.paypay.ne.jp/bff/v2/rejectP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        
+        if reject["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(reject)
+
         if reject["header"]["resultCode"] != "S0000":
             raise PayPayError(reject)
-
+        
         return reject
     
     def link_cancel(self,url:str,link_info:dict=None) -> dict:
@@ -493,12 +529,20 @@ class PayPay():
             "requestId":str(uuid4()).upper(),
             "verificationCode":url,
         }
+        if link_info["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(link_info)
+
         if link_info["header"]["resultCode"] != "S0000":
             raise PayPayError(link_info)
+        
         if link_info["payload"]["orderStatus"] != "PENDING":
             raise PayPayError("すでに 受け取り / 辞退 / キャンセル されているリンクです")
         
         cancel=requests.post("https://app4.paypay.ne.jp/p2p/v1/cancelP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        
+        if cancel["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(cancel)
+        
         if cancel["header"]["resultCode"] != "S0000":
             raise PayPayError(cancel)
         
@@ -517,6 +561,10 @@ class PayPay():
         if password:
             payload["passcode"]=password
         create=requests.post("https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        
+        if create["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(create)
+        
         if create["header"]["resultCode"] != "S0000":
             raise PayPayError(create)
         
@@ -537,6 +585,10 @@ class PayPay():
             "requestAt": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+0900"),
         }
         send=requests.post(f"https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoney",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        
+        if send["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(send)
+        
         if send["header"]["resultCode"] != "S0000":
             raise PayPayError(send)
         
@@ -553,6 +605,10 @@ class PayPay():
             "message":message
         }
         send=requests.post("https://app4.paypay.ne.jp/p2p/v1/sendP2PMessage",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        
+        if send["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(send)
+        
         if send["header"]["resultCode"] != "S0000":
             raise PayPayError(send)
         
@@ -567,8 +623,13 @@ class PayPay():
             "sessionId":None
             }
         p2pcode=requests.post("https://app4.paypay.ne.jp/bff/v1/createP2PCode",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        
+        if p2pcode["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(p2pcode)
+        
         if p2pcode["header"]["resultCode"] != "S0000":
             raise PayPayError(p2pcode)
+        
         self.created_p2pcode=p2pcode["payload"]["p2pCode"]
 
         return p2pcode
@@ -578,8 +639,13 @@ class PayPay():
             raise PayPayLoginError("まずはログインしてください")
 
         profile=self.session.get("https://app4.paypay.ne.jp/bff/v2/getProfileDisplayInfo",headers=self.headers,params={"includeExternalProfileSync":"true","payPayLang":"ja"},proxies=self.proxy).json()
+        
+        if profile["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(profile)
+
         if profile["header"]["resultCode"] != "S0000":
             raise PayPayError(profile)
+        
         self.name=profile["payload"]["userProfile"]["nickName"]
         self.external_user_id=profile["payload"]["userProfile"]["externalUserId"]
         self.icon=profile["payload"]["userProfile"]["avatarImageUrl"]
@@ -595,6 +661,10 @@ class PayPay():
         else:
             setting={"moneyPriority":"MONEY_LITE_FIRST"}
         smp=self.session.get("https://app4.paypay.ne.jp/p2p/v1/setMoneyPriority",headers=self.headers,json=setting,params={"payPayLang":"ja"},proxies=self.proxy).json()
+        
+        if smp["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(smp)
+        
         if smp["header"]["resultCode"] != "S0000":
             raise PayPayError(smp)
 
@@ -611,6 +681,10 @@ class PayPay():
             "payPayLang":"ja"
         }
         getchat=self.session.get("https://app4.paypay.ne.jp/p2p/v1/getP2PChatRoomListLite",headers=self.headers,params=params,proxies=self.proxy).json()
+        
+        if getchat["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(getchat)
+        
         if getchat["header"]["resultCode"] != "S0000":
             raise PayPayError(getchat)
 
@@ -630,6 +704,10 @@ class PayPay():
             "payPayLang":"ja"
         }
         getchat=self.session.get("https://app4.paypay.ne.jp/bff/v1/getP2PMessageList",headers=self.headers,params=params,proxies=self.proxy).json()
+        
+        if getchat["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(getchat)
+        
         if getchat["header"]["resultCode"] != "S0000":
             raise PayPayError(getchat)
 
@@ -646,6 +724,12 @@ class PayPay():
         }
         paymentcode=requests.post("https://app4.paypay.ne.jp/bff/v2/createPaymentOneTimeCodeForHome",headers=self.headers,json=methods,params=self.params,proxies=self.proxy).json()
         
+        if paymentcode["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(paymentcode)
+        
+        if paymentcode["header"]["resultCode"] != "S0000":
+            raise PayPayError(paymentcode)
+
         return paymentcode
     
     def get_point_history(self) -> dict:
@@ -657,5 +741,9 @@ class PayPay():
             "payPayLang": "ja"
         }
         phistory = requests.get("https://www.paypay.ne.jp/portal/proxy/bff/v1/getPointBalance",params=params,headers=self.headers,proxies=self.proxy).json()
+        
+        if phistory["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(phistory)
+
         if phistory["header"]["resultCode"] != "S0000":
             raise PayPayError(phistory)
