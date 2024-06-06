@@ -8,6 +8,10 @@ class PayPayError(Exception):
     pass
 class PayPayLoginError(Exception):
     pass
+class NetWorkError(Exception):
+    pass
+class PayPayNetWorkError(Exception):
+    pass
 class PayPay():
     def __init__(self,phone:str=None,password:str=None,device_uuid:str=None,client_uuid:str=str(uuid4()),access_token:str=None,proxy:dict=None):
         if phone==password==access_token:
@@ -28,7 +32,11 @@ class PayPay():
         self.params={
             "payPayLang":"ja"
         }
-        iosstore=requests.get("https://apps.apple.com/jp/app/paypay-%E3%83%9A%E3%82%A4%E3%83%9A%E3%82%A4/id1435783608")
+        try:
+            iosstore=requests.get("https://apps.apple.com/jp/app/paypay-%E3%83%9A%E3%82%A4%E3%83%9A%E3%82%A4/id1435783608",proxies=proxy)
+        except Exception as e:
+            raise NetWorkError(e)
+        
         self.version=BeautifulSoup(iosstore.text,"html.parser").find(class_="l-column small-6 medium-12 whats-new__latest__version").text.split()[1]
         self.headers={
             "Host": "app4.paypay.ne.jp",
@@ -78,7 +86,8 @@ class PayPay():
             try:
                 par=par.json()
             except:
-                raise PayPayLoginError("日本以外からは接続できません")
+                raise PayPayNetWorkError("日本以外からは接続できません")
+            
             if par["header"]["resultCode"] != "S0000":
                 raise PayPayLoginError(par)
             
