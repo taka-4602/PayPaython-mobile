@@ -345,6 +345,7 @@ class PayPay():
         
         self.access_token=refresh["payload"]["accessToken"] #2ヶ月と28日もつよ
         self.refresh_token=refresh["payload"]["refreshToken"]
+        self.headers["Authorization"]=f"Bearer {refresh['payload']['accessToken']}"
 
         return refresh
 
