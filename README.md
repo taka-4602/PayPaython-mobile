@@ -118,7 +118,7 @@ paypay=PayPay(access_token="アクセストークン")
 ### ログインのリフレッシュ
 上記にあるように電話番号、パスワード、デバイスUUIDでログインすることでワンタイムURLなしにログインをリフレッシュできるけど、```token_refresh```を使う方がスマート  
 ```py
-paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは2ヶ月と28日で失効するので失効したらリフレッシュしよう
+paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは90日で失効するので失効したらリフレッシュしよう
 print(paypay.access_token)
 print(paypay.refresh_token)
 #↑ここ2つはリフレッシュ後のものを返すようになる
