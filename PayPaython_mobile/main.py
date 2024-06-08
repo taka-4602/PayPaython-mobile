@@ -13,9 +13,9 @@ class NetWorkError(Exception):
 class PayPayNetWorkError(Exception):
     pass
 class PayPay():
-    def __init__(self,phone:str=None,password:str=None,device_uuid:str=None,client_uuid:str=str(uuid4()),access_token:str=None,proxy:dict=None):
+    def __init__(self,phone:str=None,password:str=None,device_uuid:str=None,client_uuid:str=str(uuid4()).upper(),access_token:str=None,proxy:dict=None):
         if phone==password==access_token:
-            raise PayPayError("電話番号 & パスワードを入力するか、アクセストークンを入力してください")
+            raise PayPayLoginError("電話番号 & パスワードを入力するか、アクセストークンを入力してください")
         
         if phone and "-" in phone:
             phone=phone.replace("-","")
@@ -25,7 +25,7 @@ class PayPay():
         if device_uuid:
             self.device_uuid=device_uuid
         else:
-            self.device_uuid=str(uuid4())
+            self.device_uuid=str(uuid4()).upper()
             
         self.client_uuid=client_uuid
         self.proxy=proxy
@@ -210,7 +210,7 @@ class PayPay():
                 if send_url["header"]["resultCode"] != "S0000":
                     raise PayPayLoginError(send_url)
 
-    def login(self,url:str):
+    def login(self,url:str) -> dict:
         if "https://" in url:
             url=url.replace("https://www.paypay.ne.jp/portal/oauth2/l?id=","")
         headers={
@@ -283,7 +283,7 @@ class PayPay():
         if get_token["header"]["resultCode"] != "S0000":
             raise PayPayLoginError(get_token)
         
-        self.access_token=get_token["payload"]["accessToken"] #2ヶ月と28日もつよ
+        self.access_token=get_token["payload"]["accessToken"] #90日もつよ
         self.refresh_token=get_token["payload"]["refreshToken"]
 
         return get_token
@@ -695,6 +695,9 @@ class PayPay():
         if getchat["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(getchat)
         
+        if getchat["header"]["resultCode"] == "S5000":
+            raise PayPayError("チャットルームが見つかりませんでした")
+
         if getchat["header"]["resultCode"] != "S0000":
             raise PayPayError(getchat)
 
@@ -718,6 +721,9 @@ class PayPay():
         if getchat["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(getchat)
         
+        if getchat["header"]["resultCode"] == "S5000":
+            raise PayPayError("チャットルームが見つかりませんでした")
+
         if getchat["header"]["resultCode"] != "S0000":
             raise PayPayError(getchat)
 
@@ -730,7 +736,7 @@ class PayPay():
         methods = {
             "paymentMethodType":method,
             "paymentMethodId":method_id,
-            "paymentCodeSessionId":str(uuid4()),
+            "paymentCodeSessionId":str(uuid4()).upper(),
         }
         paymentcode=requests.post("https://app4.paypay.ne.jp/bff/v2/createPaymentOneTimeCodeForHome",headers=self.headers,json=methods,params=self.params,proxies=self.proxy).json()
         
@@ -750,7 +756,7 @@ class PayPay():
             "origin":"POINT_PORTAL",
             "payPayLang": "ja"
         }
-        phistory = requests.get("https://www.paypay.ne.jp/portal/proxy/bff/v1/getPointBalance",params=params,headers=self.headers,proxies=self.proxy).json()
+        phistory = requests.get("https://www.paypay.ne.jp/portal/proxy/bff/v1/getPointBalance",headers=self.headers,params=params,proxies=self.proxy).json()
         
         if phistory["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(phistory)
@@ -759,3 +765,68 @@ class PayPay():
             raise PayPayError(phistory)
         
         return phistory
+    
+    def search_p2puser(self,user_id:str,size:int=10,is_global:bool=True,order:int=0) -> dict:
+        if not self.access_token:
+            raise PayPayLoginError("まずはログインしてください")
+
+        payload={
+            "searchTerm":user_id,
+            "pageToken":"",
+            "pageSize":size,
+            "isIngressSendMoney":False,
+            "searchTypes":"GLOBAL_SEARCH"
+        }
+        if not is_global:
+            payload["searchTypes"]="FRIEND_AND_CANDIDATE_SEARCH"
+
+        p2puser = requests.post("https://app4.paypay.ne.jp/p2p/v3/searchP2PUser",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        print(p2puser)
+        if p2puser["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(p2puser)
+
+        if p2puser["header"]["resultCode"] != "S0000":
+            if p2puser["error"]["displayErrorResponse"]["description"]=="しばらく時間をおいて、再度お試しください":
+                raise PayPayError("レート制限に達しました")
+            
+            raise PayPayError(p2puser)
+        
+        if p2puser["payload"]["searchResultEnum"] == "NO_USERS_FOUND":
+            raise PayPayError("ユーザーが見つかりませんでした")
+
+        if is_global:
+            self.found_user_name=p2puser["payload"]["globalSearchResult"]["displayName"]
+            self.found_user_icon=p2puser["payload"]["globalSearchResult"]["photoUrl"]
+            self.found_user_external_id=p2puser["payload"]["globalSearchResult"]["externalId"]
+        else:
+            self.found_user_name=p2puser["payload"]["friendsAndCandidatesSearchResults"]["friends"][order]["displayName"]
+            self.found_user_icon=p2puser["payload"]["friendsAndCandidatesSearchResults"]["friends"][order]["photoUrl"]
+            self.found_user_external_id=p2puser["payload"]["friendsAndCandidatesSearchResults"]["friends"][order]["externalId"]
+
+        return p2puser
+    
+    def initialize_chatroom(self,external_id:str) -> dict:
+        if not self.access_token:
+            raise PayPayLoginError("まずはログインしてください")
+
+        payload={
+            "returnChatRoom":True,
+            "shouldCheckMessageForFriendshipAppeal":True,
+            "externalUserId":external_id
+        }
+
+        initialize = requests.post("https://app4.paypay.ne.jp/p2p/v1/initialiseOneToOneAndLinkChatRoom",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        print(initialize)
+        if initialize["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(initialize)
+
+        if initialize["header"]["resultCode"] == "S5000":
+            raise PayPayError("チャットルームが見つかりませんでした")
+
+        if initialize["header"]["resultCode"] != "S0000":
+            raise PayPayError(initialize)
+        
+
+        self.found_chatroom_id=initialize["payload"]["chatRoom"]["chatRoomId"]
+
+        return initialize
