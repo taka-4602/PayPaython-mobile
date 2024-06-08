@@ -37,24 +37,24 @@ print(paypay.refresh_token)
 paypay=PayPay(access_token="アクセストークン")
 #ログインをスキップ
 
-paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは90日で失効するので失効したらリフレッシュしよう
+paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは90日経つと失効するので失効したらリフレッシュしよう
 print(paypay.access_token)
 print(paypay.refresh_token)
 #↑ここ2つはリフレッシュ後のものを返すようになる
 
-paypay.get_profile()
+paypay.get_profile()#引数なし、プロフィールを取得する
 print(paypay.name)#ユーザー名
 print(paypay.external_user_id)#識別のためのユーザーID、自分で決められるやつとは違う
 print(paypay.icon)#アイコンのURL
 
-paypay.get_balance()#引数なし、PayPay残高
+paypay.get_balance()#これも引数なし、PayPay残高を取得する
 print(paypay.all_balance)#すべての残高
 print(paypay.useable_balance)#すべての使用可能な残高
 print(paypay.money_light)#もってるマネーライト
 print(paypay.money)#もってるマネー
-print(paypay.point)#もってるポイント
+print(paypay.points)#もってるポイント
 
-print(paypay.get_history(size=20))#size=どれだけ履歴を取得するか、デフォルトは20だったけど少なくもできる
+print(paypay.get_history(size=20))#支出入の履歴を取得する、size=どれだけ履歴を取得するか、デフォルトは20だったけど少なくもできる
 print(paypay.get_chat_rooms(size=20))#PayPayのDMリストを取得する
 print(paypay.get_chat_room_messages(chat_room_id="sendbird_group_channel_なんとか_なんとか"))#グループIDのDMを取得する sendbird_group_channel_ はなくてもOK
 print(paypay.get_point_history())#ポイントの履歴を取得する
@@ -65,17 +65,16 @@ print(paypay.link_amount)#リンクの合計金額
 print(paypay.link_money_light)#金額のマネーライト分
 print(paypay.link_money)#金額のマネー分
 print(paypay.link_has_password)#パスワードがあるなら True
-print(paypay.link_sender_external_id)#リンクを送ってきた人のexternal_id
 print(paypay.link_chat_room_id)#チャットルームID リンク受け取ったらメッセージ送れるあれのID
 print(paypay.link_status)#PENDING COMPLEATED REJECTED CANCELED 
 print(paypay.link_order_id)
 #paypay.link_nantoka で返されるのはリンクチェックしたものだけ
 
-paypay.link_receive("ここもURL / IDどっちでもOK","必要ならパスワード 4602",link_info=link_info)#link_infoにリンクのdictをぶちこむとリンクチェックをスキップする
-paypay.link_reject("ここもURL / IDどっちでもOK",link_info=link_info)#link_infoがないならチェックリンクするのでどっちでもいい
+paypay.link_receive("ここもURL / IDどっちでもOK","必要ならパスワード 4602",link_info=link_info)#リンク受け取り、link_infoにリンクのdictをぶちこむとリンクチェックをスキップする
+paypay.link_reject("ここもURL / IDどっちでもOK",link_info=link_info)#リンクを辞退する、link_infoがないならチェックリンクするのでどっちでもいい
 paypay.link_cancel("ここもURL / IDどっちでもOK",link_info=link_info)#PayPayやっとリンクキャンセルできるようになった
 
-paypay.create_link(amount=100,password="4602")#金額と必要ならパスワード
+paypay.create_link(amount=100,password="4602")#送金リンク作成、金額と必要ならパスワード
 print(paypay.created_link)#↑で作ったURL
 print(paypay.created_chat_room_id)#↑で作ったリンクのチャットルームID
 
@@ -87,7 +86,19 @@ print(paypay.create_paymentcode())#レジでスキャンする用のバーコー
 paypay.send_money(amount=100,receiver_id="受取人のexternal_id")
 paypay.send_message(chat_room_id="DMのID",message="100円くれてありがとう!")#link_checkで取得したchat_room_idをそのまま入れてOK、PayPayのDMを自動化できる、商用してる人なら "お買い上げありがとうございます。" 的な
 
-paypay.set_money_priority(paypay_money=False)#PayPayで送る残高の優先度を変更する、Falseでマネーライト優先、Trueでマネー優先に設定
+paypay.set_money_priority(paypay_money=False)#PayPayで送る残高の優先度を変更する、Falseでマネーライト有線、Trueでマネー優先に設定
+
+paypay.search_p2puser(user_id="ユーザーID")#ユーザーが決められるPayPayIDでユーザー検索ができる、グローバルサーチはすぐにレート制限に入る
+print(paypay.found_user_name)#見つかったユーザーの表示名
+print(paypay.found_user_icon)#見つかったユーザーのアイコン
+print(paypay.found_user_external_id)#見つかったユーザーのExternalID
+
+paypay.search_p2puser(user_id="表示名",is_global=False,order=0)#is_grobalをFalseにしてフレンドなら表示名でExternalIDを取得できる、orderはユーザー名が被った時何番目のユーザーの情報を取得するか、リストだから1番上は0
+print(paypay.found_user_icon)#見つかったユーザーのアイコン
+print(paypay.found_user_external_id)#見つかったユーザーのExternalID
+
+paypay.initialize_chatroom("ExternalID")#ExternalIDを使ってDM送信用のチャットルームIDを取得できる
+print(paypay.found_chatroom_id)#見つかったユーザーのチャットルームID
 ```
 WebAPIに比べてすごく長い、でも機能はたくさん  
 #コメントで使い方は書いてるしそれが全部  
@@ -127,12 +138,34 @@ print(paypay.refresh_token)
 ### PayPayのDM
 なぜか自分に送れるし成功って言われる (反映はされない)  
 リンクチェックをした時にDM送る用のチャットルームIDが返ってくる  
-商用してる人は買われたものの詳細を送ったり、単に ありがとうございました だけでも需要はありそう  
+商用してる人は買われたものの詳細を送ったり、単に "ありがとうございました" だけでも需要はありそう  
 IDは```sendbird_group_channel_なんとか_なんとか```の形式だけど```send_message```を使う時の引数にする場合```sendbird_group_channel_```の部分はなくてもOK  
+#### もう少し効率化
+グループチャンネルIDがリンクチェック時しかわからないのはめんどくさい、検索を組み合わせて使えば効率化できます  
+##### PayPayのユーザーIDで検索する場合
+```py
+paypay.search_p2puser("taka4602")#ここで検索
+paypay.initialize_chatroom(paypay.found_user_external_id)#チャットルームIDを取得
+paypay.send_message(paypay.found_chatroom_id,"テスト")#取得したチャットルームIDにメッセージを送信
+```
+##### PayPayの表示名で検索する場合
+```py
+paypay.search_p2puser("たか",is_global=False)#ここで検索、フレンドを検索する場合は is_global=False 表示名検索はフレンドしか探せない (というかフレンド検索にPayPayIDは使えない)
+paypay.initialize_chatroom(paypay.found_user_external_id)#チャットルームIDを取得
+paypay.send_message(paypay.found_chatroom_id,"テスト")#取得したチャットルームIDにメッセージを送信
+```
+しかしユーザーID検索はすぐにレート制限にかかるので、DM送るのはけっきょくリンク受け取り時だったり...これはオプションに過ぎない...  
+表示名でフレンド検索する場合は上記に該当せず、逆にフレンド検索にPayPayIDが使えない (NotFoundが返される)  
+#### もちろんDMではなく直接送金もできる
+```py
+paypay.search_p2puser("たか")
+paypay.send_money(100,paypay.found_user_external_id)
+```
+DM送信の時と違ってExternalIDだけで送金できるからこっちの方が簡単
 ### PayPayエラー
 受け取りや辞退の時に既に処理済みのリンクを投げるとエラーになるようにしています  
 無効なリンクを処理しようとしてもエラーになります  
-また ログイン作業の失敗や S0001 : アクセストークンが取り消されました が返ってきた場合、PayPayLoginError (インポートできます) をraiseするようになってます  
+また ログイン作業の失敗や S0001 : アクセストークンが取り消されました が返ってきた場合、PayPayLoginError (インポートできます) がraiseされます    
 判別用に使ってください
 ### 余談
 WebAPIの時は詐欺に使われたりだったけど4桁OTPが廃止された今のモバイルAPIならもう引っかかる人はいないはず  
