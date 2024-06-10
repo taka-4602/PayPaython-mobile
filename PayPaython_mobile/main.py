@@ -425,6 +425,7 @@ class PayPay():
         
         self.link_sender_name=link_info["payload"]["sender"]["displayName"]
         self.link_sender_external_id=link_info["payload"]["sender"]["externalId"]
+        self.link_sender_icon=link_info["payload"]["sender"]["photoUrl"]
         self.link_order_id=link_info["payload"]["pendingP2PInfo"]["orderId"]
         self.link_chat_room_id=link_info["payload"]["message"]["chatRoomId"]
         self.link_amount=link_info["payload"]["pendingP2PInfo"]["amount"]
@@ -624,7 +625,7 @@ class PayPay():
         
         return send
     
-    def create_p2pcode(self) -> dict:
+    def create_p2pcode(self,amount:int=None) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -632,6 +633,10 @@ class PayPay():
             "amount":None,
             "sessionId":None
             }
+        if amount:
+            payload["amount"]=amount
+            payload["sessionId"]=str(uuid4())
+            
         p2pcode=requests.post("https://app4.paypay.ne.jp/bff/v1/createP2PCode",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
         
         if p2pcode["header"]["resultCode"] == "S0001":
