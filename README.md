@@ -78,7 +78,7 @@ paypay.create_link(amount=100,password="4602")#送金リンク作成、金額と
 print(paypay.created_link)#↑で作ったURL
 print(paypay.created_chat_room_id)#↑で作ったリンクのチャットルームID
 
-paypay.create_p2pcode()#引数なし、自分に送金してもらうためのQRコードのリンク
+paypay.create_p2pcode()#自分に送金してもらうためのQRコードのリンク、amount=intでQRコードの値段を設定
 print(paypay.created_p2pcode)#↑で作ったURL
 
 print(paypay.create_paymentcode())#レジでスキャンする用のバーコードを生成、画像はアプリ内で処理されるからコードだけ生成してもよっぽど機材を持ってる人じゃない限り無意味、死に機能
