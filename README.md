@@ -52,7 +52,7 @@ print(paypay.all_balance)#すべての残高
 print(paypay.useable_balance)#すべての使用可能な残高
 print(paypay.money_light)#もってるマネーライト
 print(paypay.money)#もってるマネー
-print(paypay.points)#もってるポイント
+print(paypay.point)#もってるポイント
 
 print(paypay.get_history(size=20))#支出入の履歴を取得する、size=どれだけ履歴を取得するか、デフォルトは20だったけど少なくもできる
 print(paypay.get_chat_rooms(size=20))#PayPayのDMリストを取得する
