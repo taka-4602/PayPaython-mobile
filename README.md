@@ -66,7 +66,7 @@ print(paypay.link_money_light)#金額のマネーライト分
 print(paypay.link_money)#金額のマネー分
 print(paypay.link_has_password)#パスワードがあるなら True
 print(paypay.link_chat_room_id)#チャットルームID リンク受け取ったらメッセージ送れるあれのID
-print(paypay.link_status)#PENDING COMPLEATED REJECTED CANCELED 
+print(paypay.link_status)#PENDING COMPLEATED REJECTED FAILED
 print(paypay.link_order_id)
 #paypay.link_nantoka で返されるのはリンクチェックしたものだけ
 
