@@ -246,7 +246,11 @@ class PayPay():
         if get_uri["header"]["resultCode"] != "S0000":
             raise PayPayLoginError(get_uri)
         
-        uri=get_uri["payload"]["redirect_uri"].replace("paypay://oauth2/callback?","").split("&")
+        try:
+            uri=get_uri["payload"]["redirect_uri"].replace("paypay://oauth2/callback?","").split("&")
+        except:
+            raise PayPayLoginError('redirect_uriが見つかりませんでした\n'+str(get_uri))
+
         headers={
             "Client-Version": self.version,
             "Device-Uuid": self.device_uuid,
@@ -338,6 +342,9 @@ class PayPay():
         refresh=self.session.post("https://app4.paypay.ne.jp/bff/v2/oauth2/refresh",headers=self.headers,data=refdata,proxies=self.proxy).json()
 
         if refresh["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(refresh)
+        
+        if refresh["header"]["resultCode"] == "S0003":
             raise PayPayLoginError(refresh)
         
         if refresh["header"]["resultCode"] != "S0000":
