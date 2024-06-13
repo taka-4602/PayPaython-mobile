@@ -12,7 +12,7 @@ PayPayのサポートに連絡することで早く解除してもらえるみ�
 ### 日本からしかアクセスできない
 ふつうにブロックされます  
 海外のバーチャルマシンとかを使う場合はプロキシを使いましょう
-## Let'Go! ([前と同じ](https://github.com/taka-4602/PayPaython?tab=readme-ov-file#lets-go)ノリ)
+## Let's Go! ([前と同じ](https://github.com/taka-4602/PayPaython?tab=readme-ov-file#lets-go)ノリ)
 #### example.py  
 ```py
 from PayPaython_mobile import PayPay
