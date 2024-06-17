@@ -457,12 +457,12 @@ class PayPay():
             link_info=requests.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params).json()
 
         payload={
-            "verificationCode": url,
-            "requestId": str(uuid4()).upper(),
-            "requestAt": datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "orderId": link_info["payload"]["pendingP2PInfo"]["orderId"],
-            "senderChannelUrl": link_info["payload"]["message"]["chatRoomId"],
-            "senderMessageId": link_info["payload"]["message"]["messageId"]
+            "requestId":str(uuid4()).upper(),
+            "orderId":link_info["payload"]["pendingP2PInfo"]["orderId"],
+            "verificationCode":url,
+            "passcode":None,
+            "senderMessageId":link_info["payload"]["message"]["messageId"],
+            "senderChannelUrl":link_info["payload"]["message"]["chatRoomId"]
         }
         if link_info["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(link_info)
@@ -503,12 +503,11 @@ class PayPay():
             link_info=requests.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params).json()
 
         payload={
-            "verificationCode": url,
-            "requestId": str(uuid4()).upper(),
-            "requestAt": datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "orderId": link_info["payload"]["pendingP2PInfo"]["orderId"],
-            "senderChannelUrl": link_info["payload"]["message"]["chatRoomId"],
-            "senderMessageId": link_info["payload"]["message"]["messageId"]
+            "requestId":str(uuid4()).upper(),
+            "orderId":link_info["payload"]["pendingP2PInfo"]["orderId"],
+            "verificationCode":url,
+            "senderMessageId":link_info["payload"]["message"]["messageId"],
+            "senderChannelUrl":link_info["payload"]["message"]["chatRoomId"]
         }
         if link_info["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(link_info)
@@ -572,9 +571,9 @@ class PayPay():
 
         payload={
             "requestId":str(uuid4()).upper(),
-            "amount": amount,
-            "theme": "default-sendmoney",
-            "requestAt": datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime("%Y-%m-%dT%H:%M:%SZ")
+            "amount":amount,
+            "theme":"default-sendmoney",
+            "source":"sendmoney_home_sns"
         }
         if password:
             payload["passcode"]=password
@@ -596,11 +595,12 @@ class PayPay():
             raise PayPayLoginError("まずはログインしてください")
 
         payload = {
-            "theme": "default-sendmoney",
-            "externalReceiverId": receiver_id,
-            "amount": amount,
-            "requestId": str(uuid4()).upper(),
-            "requestAt": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S+0900"),
+            "amount":amount,
+            "theme":"default-sendmoney",
+            "requestId":str(uuid4()).upper(),
+            "externalReceiverId":receiver_id,
+            "ackRiskError":False,
+            "source":"sendmoney_history_chat"
         }
         send=requests.post(f"https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoney",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
         
@@ -721,6 +721,7 @@ class PayPay():
         
         if not "sendbird_group_channel_" in chat_room_id:
             chat_room_id="sendbird_group_channel_" + chat_room_id
+
         params={
             "chatRoomId":chat_room_id,
             "include":include,
@@ -793,7 +794,6 @@ class PayPay():
             payload["searchTypes"]="FRIEND_AND_CANDIDATE_SEARCH"
 
         p2puser = requests.post("https://app4.paypay.ne.jp/p2p/v3/searchP2PUser",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
-        print(p2puser)
         if p2puser["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(p2puser)
 
@@ -826,9 +826,7 @@ class PayPay():
             "shouldCheckMessageForFriendshipAppeal":True,
             "externalUserId":external_id
         }
-
         initialize = requests.post("https://app4.paypay.ne.jp/p2p/v1/initialiseOneToOneAndLinkChatRoom",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
-        print(initialize)
         if initialize["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(initialize)
 
@@ -842,3 +840,16 @@ class PayPay():
         self.found_chatroom_id=initialize["payload"]["chatRoom"]["chatRoomId"]
 
         return initialize
+    
+    def alive(self) -> None:
+        alive=requests.get("https://app4.paypay.ne.jp/bff/v2/getPrioritizedPaymentMethodsConfiguration?onlyPreferredPaymentMethod=true&payPayLang=ja",headers=self.headers,proxies=self.proxy).json()
+        if alive["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(alive)
+        
+        if alive["header"]["resultCode"] != "S0000":
+            raise PayPayError(alive)
+        
+        requests.get("https://app4.paypay.ne.jp/bff/v1/getGlobalServiceStatus?payPayLang=en",headers=self.headers,proxies=self.proxy)
+        requests.get("https://app4.paypay.ne.jp/bff/v1/getWalletWidgetInfo?includePayLaterCcInfo=false&payPayLang=ja",headers=self.headers,proxies=self.proxy)
+        requests.post("https://app4.paypay.ne.jp/bff/v2/getHomeDisplayInfo?includeBeginnerFlag=false&includeSkinInfoFlag=false&networkStatus=WIFI&payPayLang=ja",headers=self.headers,json={"userLat":None,"userLon":None},proxies=self.proxy)
+        requests.get("https://app4.paypay.ne.jp/bff/v2/getProfileDisplayInfo?includeExternalProfileSync=true&actionKeys=&payPayLang=ja",headers=self.headers,proxies=self.proxy)
