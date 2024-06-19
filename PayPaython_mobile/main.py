@@ -185,6 +185,7 @@ class PayPay():
                 
                 self.access_token=get_token["payload"]["accessToken"] #2ヶ月と28日もつよ
                 self.refresh_token=get_token["payload"]["refreshToken"]
+                self.headers["Authorization"]=f"Bearer {self.access_token}"
 
             else:
 
@@ -289,6 +290,7 @@ class PayPay():
         
         self.access_token=get_token["payload"]["accessToken"] #90日もつよ
         self.refresh_token=get_token["payload"]["refreshToken"]
+        self.headers["Authorization"]=f"Bearer {self.access_token}"
 
         return get_token
     
@@ -396,7 +398,10 @@ class PayPay():
         if balance["header"]["resultCode"] != "S0000":
             raise PayPayError(balance)
         
-        self.money=balance["payload"]["walletDetail"]["emoneyBalanceInfo"]["balance"]
+        try:
+            self.money=balance["payload"]["walletDetail"]["emoneyBalanceInfo"]["balance"]
+        except:
+            self.money=None
         self.money_light=balance["payload"]["walletDetail"]["prepaidBalanceInfo"]["balance"]
         self.all_balance=balance["payload"]["walletSummary"]["allTotalBalanceInfo"]["balance"]
         self.useable_balance=balance["payload"]["walletSummary"]["usableBalanceInfoWithoutCashback"]["balance"]
