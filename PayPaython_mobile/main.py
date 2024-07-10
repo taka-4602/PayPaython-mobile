@@ -14,8 +14,6 @@ class PayPayNetWorkError(Exception):
     pass
 class PayPay():
     def __init__(self,phone:str=None,password:str=None,device_uuid:str=None,client_uuid:str=str(uuid4()).upper(),access_token:str=None,proxy:dict=None):
-        if phone==password==access_token:
-            raise PayPayLoginError("電話番号 & パスワードを入力するか、アクセストークンを入力してください")
         
         if phone and "-" in phone:
             phone=phone.replace("-","")
@@ -62,7 +60,7 @@ class PayPay():
         if access_token:
             self.headers["Authorization"]=f"Bearer {access_token}"
             self.access_token=access_token
-        else:
+        elif phone:
             self.access_token=None
             self.refresh_token=None
             self.timestamp=None
@@ -183,7 +181,7 @@ class PayPay():
                 if get_token["header"]["resultCode"] != "S0000":
                     raise PayPayLoginError(get_token)
                 
-                self.access_token=get_token["payload"]["accessToken"] #90日もつよ
+                self.access_token=get_token["payload"]["accessToken"] #2ヶ月と28日もつよ
                 self.refresh_token=get_token["payload"]["refreshToken"]
                 self.headers["Authorization"]=f"Bearer {self.access_token}"
 
@@ -352,7 +350,7 @@ class PayPay():
         if refresh["header"]["resultCode"] != "S0000":
             raise PayPayError(refresh)
         
-        self.access_token=refresh["payload"]["accessToken"] #90日もつよ
+        self.access_token=refresh["payload"]["accessToken"] #2ヶ月と28日もつよ
         self.refresh_token=refresh["payload"]["refreshToken"]
         self.headers["Authorization"]=f"Bearer {refresh['payload']['accessToken']}"
 
