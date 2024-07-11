@@ -59,7 +59,7 @@ print(paypay.get_chat_rooms(size=20))#PayPayのDMリストを取得する
 print(paypay.get_chat_room_messages(chat_room_id="sendbird_group_channel_なんとか_なんとか"))#グループIDのDMを取得する sendbird_group_channel_ はなくてもOK
 print(paypay.get_point_history())#ポイントの履歴を取得する
 
-paypay.link_check("KT975hvzbH1EulTr")#web=True でWebAPIを使ってリンクを確認できる (ログインがいらない、もし使う場合はPayPay(access_token="なし"))とでもしておく
+paypay.link_check("KT975hvzbH1EulTr")#web=True でWebAPIを使ってリンクを確認できる (ログインがいらない、もし使う場合はPayPay(引数なし)でログインなにもしない
 link_info=paypay.link_check("https://pay.paypay.ne.jp/KT975hvzbH1EulTr")#URLそのままでもOK
 print(paypay.link_amount)#リンクの合計金額
 print(paypay.link_money_light)#金額のマネーライト分
