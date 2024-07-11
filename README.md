@@ -155,7 +155,7 @@ paypay.initialize_chatroom(paypay.found_user_external_id)#チャットルームI
 paypay.send_message(paypay.found_chatroom_id,"テスト")#取得したチャットルームIDにメッセージを送信
 ```
 しかしユーザーID検索はすぐにレート制限にかかるので、DM送るのはけっきょくリンク受け取り時だったり...これはオプションに過ぎない...  
-表示名でフレンド検索する場合は上記に該当せず、逆にフレンド検索にPayPayIDが使えない (NotFoundが返される)  
+表示名でフレンド検索する場合は上記に該当せず、逆にフレンド検索にはPayPayIDが使えない (NotFoundが返される)  
 #### もちろんDMではなく直接送金もできる
 ```py
 paypay.search_p2puser("たか")
@@ -178,7 +178,7 @@ Botは効率が良すぎる...
 ### 余談
 WebAPIの時は詐欺に使われたりだったけど、4桁OTPが廃止された今のモバイルAPIならもう引っかかる人はいないはず  
 ユーザーエージェントはiPhone8 (iOS 16.7.5) トラフィック確認に使った端末がiPhone8だから  
-実機はiOS 14.8だけどユーザーエージェントでは16.7.5に変えている (というかPayPayは最近iOS 14のサポートを終了したみたい...)
+実機はiOS 14.8だけどユーザーエージェントは16.7.5に変えている (というかPayPayは最近iOS 14のサポートを終了したみたい...)
 ## コンタクト  
 Discord サーバー / https://discord.gg/aSyaAK7Ktm  
 Discord ユーザー名 / .taka.  
