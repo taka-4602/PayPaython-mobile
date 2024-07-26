@@ -86,7 +86,7 @@ print(paypay.create_paymentcode())#レジでスキャンする用のバーコー
 paypay.send_money(amount=100,receiver_id="受取人のexternal_id")
 paypay.send_message(chat_room_id="DMのID",message="100円くれてありがとう!")#link_checkで取得したchat_room_idをそのまま入れてOK、PayPayのDMを自動化できる、商用してる人なら "お買い上げありがとうございます。" 的な
 
-paypay.set_money_priority(paypay_money=False)#PayPayで送る残高の優先度を変更する、Falseでマネーライト有線、Trueでマネー優先に設定
+paypay.set_money_priority(paypay_money=False)#PayPayで送る残高の優先度を変更する、Falseでマネーライト優先、Trueでマネー優先に設定
 
 paypay.search_p2puser(user_id="ユーザーID")#ユーザーが決められるPayPayIDでユーザー検索ができる、グローバルサーチはすぐにレート制限に入る
 print(paypay.found_user_name)#見つかったユーザーの表示名
