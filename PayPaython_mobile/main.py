@@ -482,8 +482,12 @@ class PayPay():
         if link_info["payload"]["pendingP2PInfo"]["isSetPasscode"]:
             payload["passcode"] = password
         
-        receive = requests.post("https://app4.paypay.ne.jp/bff/v2/acceptP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
-
+        receive = requests.post("https://app4.paypay.ne.jp/bff/v2/acceptP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy)
+        try:
+            receive=receive.json()
+        except:
+            raise PayPayNetWorkError("日本以外からは接続できません")
+        
         if receive["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(receive)
         
@@ -580,7 +584,11 @@ class PayPay():
         }
         if password:
             payload["passcode"]=password
-        create=requests.post("https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        create=requests.post("https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy)
+        try:
+            create=create.json()
+        except:
+            raise PayPayNetWorkError("日本以外からは接続できません")
         
         if create["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(create)
@@ -605,7 +613,11 @@ class PayPay():
             "ackRiskError":False,
             "source":"sendmoney_history_chat"
         }
-        send=requests.post(f"https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoney",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
+        send=requests.post(f"https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoney",headers=self.headers,json=payload,params=self.params,proxies=self.proxy)
+        try:
+            send=send.json()
+        except:
+            raise PayPayNetWorkError("日本以外からは接続できません")
         
         if send["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(send)
