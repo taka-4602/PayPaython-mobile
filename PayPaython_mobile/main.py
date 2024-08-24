@@ -181,7 +181,7 @@ class PayPay():
                 if get_token["header"]["resultCode"] != "S0000":
                     raise PayPayLoginError(get_token)
                 
-                self.access_token=get_token["payload"]["accessToken"] #2ヶ月と28日もつよ
+                self.access_token=get_token["payload"]["accessToken"] #90日もつよ
                 self.refresh_token=get_token["payload"]["refreshToken"]
                 self.headers["Authorization"]=f"Bearer {self.access_token}"
 
@@ -350,7 +350,7 @@ class PayPay():
         if refresh["header"]["resultCode"] != "S0000":
             raise PayPayError(refresh)
         
-        self.access_token=refresh["payload"]["accessToken"] #2ヶ月と28日もつよ
+        self.access_token=refresh["payload"]["accessToken"] #90日もつよ
         self.refresh_token=refresh["payload"]["refreshToken"]
         self.headers["Authorization"]=f"Bearer {refresh['payload']['accessToken']}"
 
