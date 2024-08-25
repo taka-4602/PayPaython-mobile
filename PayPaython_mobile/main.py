@@ -341,7 +341,7 @@ class PayPay():
         }
         refresh=self.session.post("https://app4.paypay.ne.jp/bff/v2/oauth2/refresh",headers=self.headers,data=refdata,proxies=self.proxy).json()
 
-        if refresh["header"]["resultCode"] == "S0001":
+        if refresh["header"]["resultCode"] == "S0001" or refresh["header"]["resultCode"] == "S1003":
             raise PayPayLoginError(refresh)
         
         if refresh["header"]["resultCode"] == "S0003":
@@ -572,7 +572,7 @@ class PayPay():
         
         return cancel
     
-    def create_link(self,amount:int,password:str=None) -> dict:
+    def create_link(self,amount:int,password:str=None,pochibukuro=None) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -584,6 +584,8 @@ class PayPay():
         }
         if password:
             payload["passcode"]=password
+        if pochibukuro:
+            payload["theme"]="pochibukuro"
         create=requests.post("https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy)
         try:
             create=create.json()
