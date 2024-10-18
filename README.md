@@ -1,6 +1,10 @@
 # PayPaython-mobile ![icon](https://raw.githubusercontent.com/taka-4602/PayPaython/main/images/1.png)
 Python用のPayPayモバイルAPIラッパー
-### >> ```pip install paypaython-mobile``` <<
+## インストール
+```py
+pip install paypaython-mobile
+```
+必須：requests, bs4, pkce
 ## [ ! ] PayPayからのレスポンス集 -> *[PayPayResponce.md](https://github.com/taka-4602/PayPaython/blob/main/PAYPAYRESPONCE.md)*
 PayPay APIを使った時に返されるレスポンスをまとめたドキュメントです  
 返ってきたレスポンスにどんな意味があるか知りたい場合、このドキュメントが役に立つかもしれません   
