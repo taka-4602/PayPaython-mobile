@@ -559,7 +559,7 @@ class PayPay():
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
                 "Content-Type":"application/json"
             }
-            link_info=requests.get(f"https://www.paypay.ne.jp/app/v2/p2p-api/getP2PLinkInfo?verificationCode={url}",headers=headers).json()
+            link_info=requests.get(f"https://www.paypay.ne.jp/app/v2/p2p-api/getP2PLinkInfo?verificationCode={url}",headers=headers,proxies=self.proxy).json()
             
         else:
             if not self.access_token:
@@ -570,7 +570,7 @@ class PayPay():
                 "verificationCode": url,
                 "payPayLang": "ja"
             }
-            link_info=self.session.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params).json()
+            link_info=self.session.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params,proxies=self.proxy).json()
         
         if link_info["header"]["resultCode"] == "S0001":
             raise PayPayLoginError(link_info)
@@ -617,7 +617,7 @@ class PayPay():
                 "verificationCode": url,
                 "payPayLang": "ja"
             }
-            link_info=self.session.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params).json()
+            link_info=self.session.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params,proxies=self.proxy).json()
         
         self.headers=update_header_baggage(self.headers,sentry_public_key)
         payload={
@@ -671,7 +671,7 @@ class PayPay():
                 "verificationCode": url,
                 "payPayLang": "ja"
             }
-            link_info=self.session.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params).json()
+            link_info=self.session.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params,proxies=self.proxy).json()
         
         self.headers=update_header_baggage(self.headers,sentry_public_key)
         payload={
@@ -712,7 +712,7 @@ class PayPay():
                 "verificationCode": url,
                 "payPayLang": "ja"
             }
-            link_info=self.session.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params).json()
+            link_info=self.session.get("https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo",headers=self.headers,params=params,proxies=self.proxy).json()
 
         self.headers=update_header_baggage(self.headers,sentry_public_key)
         payload={
