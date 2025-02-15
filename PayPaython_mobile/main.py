@@ -138,6 +138,9 @@ class PayPay():
 
         elif isinstance(proxy, dict):
             self.proxy=proxy
+            
+        else:
+            self.proxy=proxy
 
         self.params={
             "payPayLang":"ja"
