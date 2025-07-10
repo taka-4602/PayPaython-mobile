@@ -164,7 +164,7 @@ class PayPay():
             "Client-UUID": self.client_uuid,
             "Client-Version": self.version,
             "Connection": "Keep-Alive",
-            #"Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/x-www-form-urlencoded",
             "Device-Acceleration": device_state.device_acceleration,
             "Device-Acceleration-2": device_state.device_acceleration_2,
             "Device-Brand-Name": "KDDI",
