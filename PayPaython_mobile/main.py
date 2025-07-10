@@ -150,7 +150,7 @@ class PayPay():
         #except Exception as e:
         #    raise NetWorkError(e)
         
-        self.version="4.78.1" #BeautifulSoup(iosstore.text,"html.parser").find(class_="l-column small-6 medium-12 whats-new__latest__version").text.split()[1]
+        self.version="5.11.1" #BeautifulSoup(iosstore.text,"html.parser").find(class_="l-column small-6 medium-12 whats-new__latest__version").text.split()[1]
         device_state = generate_device_state()
         self.headers = {
             "Accept": "*/*",
@@ -375,7 +375,7 @@ class PayPay():
                 if otl_request["header"]["resultCode"] != "S0000":
                     raise PayPayLoginError(otl_request)
 
-    def login(self,url:str) -> dict:
+    def login(self,url:str):
         if "https://" in url:
             url=url.replace("https://www.paypay.ne.jp/portal/oauth2/l?id=","")
 
@@ -750,7 +750,7 @@ class PayPay():
         payload={
             "requestId":str(uuid4()),
             "amount":amount,
-            "socketConnection": "SENDBIRD",
+            "socketConnection": "P2P",
             "theme":theme,
             "source":"sendmoney_home_sns"
         }
@@ -794,12 +794,12 @@ class PayPay():
             "externalReceiverId":receiver_id,
             "ackRiskError":False,
             "source":"sendmoney_history_chat",
-            "socketConnection": "SENDBIRD"
+            "socketConnection": "P2P"
         }
         if pochibukuro:
             payload["theme"]="pochibukuro"
 
-        send=self.session.post(f"https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoney",headers=self.headers,json=payload,params=self.params,proxies=self.proxy)
+        send=self.session.post(f"https://app4.paypay.ne.jp/p2p/v3/executeP2PSendMoney",headers=self.headers,json=payload,params=self.params,proxies=self.proxy)
         try:
             send=send.json()
         except:
@@ -832,7 +832,7 @@ class PayPay():
         payload = {
             "channelUrl":chat_room_id,
             "message":message,
-            "socketConnection": "SENDBIRD"
+            "socketConnection": "P2P"
         }
         send=self.session.post("https://app4.paypay.ne.jp/p2p/v1/sendP2PMessage",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
         
@@ -928,7 +928,7 @@ class PayPay():
             "pageSize":str(size),
             "customTypes":"P2P_CHAT,P2P_CHAT_INACTIVE,P2P_PUBLIC_GROUP_CHAT,P2P_LINK,P2P_OLD",
             "requiresLastMessage":last_message,
-            "socketConnection": "SENDBIRD",
+            "socketConnection": "P2P",
             "payPayLang":"ja"
         }
         getchat=self.session.get("https://app4.paypay.ne.jp/p2p/v1/getP2PChatRoomListLite",headers=self.headers,params=params,proxies=self.proxy).json()
@@ -1050,7 +1050,7 @@ class PayPay():
             "returnChatRoom":True,
             "shouldCheckMessageForFriendshipAppeal":True,
             "externalUserId":external_id,
-            "socketConnection": "SENDBIRD"
+            "socketConnection": "P2P"
         }
         initialize = self.session.post("https://app4.paypay.ne.jp/p2p/v1/initialiseOneToOneAndLinkChatRoom",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
         if initialize["header"]["resultCode"] == "S0001":
