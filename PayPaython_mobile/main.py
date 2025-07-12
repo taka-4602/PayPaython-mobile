@@ -646,8 +646,8 @@ class PayPay():
     
         if link_info["payload"]["pendingP2PInfo"]["isSetPasscode"]:
             payload["passcode"] = passcode
-        
-        receive = self.session.post("https://app4.paypay.ne.jp/bff/v2/acceptP2PSendMoneyLink",headers=self.headers,json=payload,params=self.params,proxies=self.proxy)
+            
+        receive = self.session.post("https://app4.paypay.ne.jp/bff/v2/acceptP2PSendMoneyLink",headers=self.headers,json=payload,params={"payPayLang":"ja","appContext":"P2PMoneyTransferDetailScreen_linkReceiver"},proxies=self.proxy)
         try:
             receive=receive.json()
         except:
