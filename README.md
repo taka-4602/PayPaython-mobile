@@ -189,5 +189,5 @@ Botは効率が良すぎる...
 ユーザーエージェントがiPhone8からKDDI版Samsung S9 (SCV38)に変更されました (iOS 14.8のPayPayアップデートはとっくに切られた)  
 iOS 14.8はAndroid 10より2年も新しいのにPayPayに限らずほとんどのアプリが切られてしまった... iOSは寿命が短くて困る... (S9はOneUI 2.1 / Android 10)
 ## コンタクト  
-Discord サーバー / https://discord.gg/YdrTY2JPR2  
+Discord サーバー / https://discord.gg/g4UE3kQbmS  
 Discord ユーザー名 / .taka.  
