@@ -1098,10 +1098,10 @@ class PayPay():
             raw: dict
 
         return BarcodeInfo(
-            amount=barcode["body"]["amount"],
-            user_name=barcode["body"]["userName"],
-            external_user_id=barcode["body"]["externalUserId"],
-            user_icon=barcode["body"]["userIcon"],
+            amount=barcode["payload"]["userCodeInfo"]["amount"],
+            user_name=barcode["payload"]["userCodeInfo"]["userInfo"]["displayName"],
+            external_user_id=barcode["payload"]["userCodeInfo"]["userInfo"]["externalUserId"],
+            user_icon=barcode["payload"]["userCodeInfo"]["userInfo"]["avatarImageUrl"],
             raw=barcode
         )
 
