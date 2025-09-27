@@ -583,7 +583,7 @@ class PayPay():
         
         class LinkInfo(NamedTuple):
             sender_name: str
-            sender_external_id: str
+            sender_external_user_id: str
             sender_icon: str
             order_id: str
             chat_room_id: str
@@ -595,7 +595,7 @@ class PayPay():
             raw: dict
 
         sender_name=link_info["payload"]["sender"]["displayName"]
-        sender_external_id=link_info["payload"]["sender"]["externalId"]
+        sender_external_user_id=link_info["payload"]["sender"]["externalId"]
         sender_icon=link_info["payload"]["sender"]["photoUrl"]
         order_id=link_info["payload"]["pendingP2PInfo"]["orderId"]
         chat_room_id=link_info["payload"]["message"]["chatRoomId"]
@@ -605,7 +605,7 @@ class PayPay():
         money=link_info["payload"]["message"]["data"]["subWalletSplit"]["senderEmoneyAmount"]
         has_password=link_info["payload"]["pendingP2PInfo"]["isSetPasscode"]
 
-        return LinkInfo(sender_name,sender_external_id,sender_icon,order_id,chat_room_id,amount,status,money_light,money,has_password,link_info)
+        return LinkInfo(sender_name,sender_external_user_id,sender_icon,order_id,chat_room_id,amount,status,money_light,money,has_password,link_info)
     
     def link_receive(self,url:str,passcode:str=None,link_info:dict=None) -> dict:
         if not self.access_token:
@@ -1027,21 +1027,21 @@ class PayPay():
         class P2PUser(NamedTuple):
             name: str
             icon: str
-            external_id: str
+            external_user_id: str
             raw: dict
 
         if is_global:
             name=p2puser["payload"]["globalSearchResult"]["displayName"]
             icon=p2puser["payload"]["globalSearchResult"]["photoUrl"]
-            external_id=p2puser["payload"]["globalSearchResult"]["externalId"]
+            external_user_id=p2puser["payload"]["globalSearchResult"]["externalId"]
         else:
             name=p2puser["payload"]["friendsAndCandidatesSearchResults"]["friends"][order]["displayName"]
             icon=p2puser["payload"]["friendsAndCandidatesSearchResults"]["friends"][order]["photoUrl"]
-            external_id=p2puser["payload"]["friendsAndCandidatesSearchResults"]["friends"][order]["externalId"]
+            external_user_id=p2puser["payload"]["friendsAndCandidatesSearchResults"]["friends"][order]["externalId"]
         
-        return P2PUser(name,icon,external_id,p2puser)
+        return P2PUser(name,icon,external_user_id,p2puser)
     
-    def initialize_chatroom(self,external_id:str):
+    def initialize_chatroom(self,external_user_id:str):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
         
@@ -1049,7 +1049,7 @@ class PayPay():
         payload={
             "returnChatRoom":True,
             "shouldCheckMessageForFriendshipAppeal":True,
-            "externalUserId":external_id,
+            "externalUserId":external_user_id,
             "socketConnection": "P2P"
         }
         initialize = self.session.post("https://app4.paypay.ne.jp/p2p/v1/initialiseOneToOneAndLinkChatRoom",headers=self.headers,json=payload,params=self.params,proxies=self.proxy).json()
@@ -1069,7 +1069,42 @@ class PayPay():
         chatroom_id=initialize["payload"]["chatRoom"]["chatRoomId"]
 
         return InitializeChatRoom(chatroom_id,initialize)
-    
+
+    def get_barcode_info(self, url: str):
+        if not self.access_token:
+            raise PayPayLoginError("まずはログインしてください")
+        
+        params = {
+            "code": url,
+            #"paymentMethodId": "135062845",
+            #"paymentMethodType": "PAY_LATER_CC",
+            #"lastSelectedHomePaymentMethodId": "135062845",
+            #"lastSelectedHomePaymentMethodType": "PAY_LATER_CC",
+            "payPayLang": "ja"
+        }
+        barcode=self.session.get("https://app4.paypay.ne.jp/bff/v2/getBarcodeInfo",headers=self.headers,params=params,proxies=self.proxy).json()
+
+        if barcode["header"]["resultCode"] == "S0001":
+            raise PayPayLoginError(barcode)
+
+        if barcode["header"]["resultCode"] != "S0000":
+            raise PayPayError(barcode)
+        
+        class BarcodeInfo(NamedTuple):
+            amount: int
+            user_name: str
+            external_user_id: str
+            user_icon: str
+            raw: dict
+
+        return BarcodeInfo(
+            amount=barcode["body"]["amount"],
+            user_name=barcode["body"]["userName"],
+            external_user_id=barcode["body"]["externalUserId"],
+            user_icon=barcode["body"]["userIcon"],
+            raw=barcode
+        )
+
     def alive(self) -> None:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
