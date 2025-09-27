@@ -99,6 +99,10 @@ print(search_p2puser.external_user_id)#見つかったユーザーのExternalID
 
 initialize_chatroom=paypay.initialize_chatroom("ExternalID")#ExternalIDを使ってDM送信用のチャットルームIDを取得できる
 print(initialize_chatroom.chatroom_id)#見つかったユーザーのチャットルームID
+
+get_barcode_info=paypay.get_barcode_info("https://qr.paypay.ne.jp/.............")#URLをそのまま投げてPayPay請求リンクから情報を取得する
+print(get_barcode_info.amount)#請求金額: 請求リンクに金額が指定されていなかったら None になる
+print(get_barcode_info.external_user_id)#ここに .send_money の receiver_id に入れるExternalIDがある
 ```
 WebAPIに比べてすごく長い、でも機能はたくさん  
 #コメントで使い方は書いてるしそれが全部  
@@ -175,13 +179,15 @@ paypay.alive() #引数も返り値もなし
 ```
 Botは効率が良すぎる...
 ### 古いバージョン
-古いバージョンはPayPayアプリのバージョンをiOSStoreから取得してユーザーエージェントを変えていましたが、どうやらPayPayの仕様変更のせいでPayPayアプリが新しいのに古いリクエストを使ってるのがバレるとBotがログアウトされるみたいです  
-1.xのままその問題を解決したいなら```pip install paypaython-mobile==0.14.8```を使ってください (ユーザーエージェントが固定される)  
-最新バージョンをユーザーエージェントにしてもなにもいいことがないので、新しくしたPayPaython-mobileは固定にしました  
-古いバージョンのドキュメントはここから -> [README_old.md](https://github.com/taka-4602/PayPaython-mobile/blob/main/README_old.md)
+~~古いバージョンはPayPayアプリのバージョンをiOSStoreから取得してユーザーエージェントを変えていましたが、どうやらPayPayの仕様変更のせいでPayPayアプリが新しいのに古いリクエストを使ってるのがバレるとBotがログアウトされるみたいです~~  
+~~1.xのままその問題を解決したいなら```pip install paypaython-mobile==0.14.8```を使ってください (ユーザーエージェントが固定される)~~  
+~~最新バージョンをユーザーエージェントにしてもなにもいいことがないので、新しくしたPayPaython-mobileは固定にしました~~  
+~~古いバージョンのドキュメントはここから -> [README_old.md](https://github.com/taka-4602/PayPaython-mobile/blob/main/README_old.md)~~  
+#### 古いバージョンはPayPayが切ったため死にました💀
 ### 余談
 久しぶりに中身を大幅に更新しました、でもユーザー目線だと違いがわかりにくい **だけど1.xと2.xには互換性がない**  
 バージョンが1.xを飛んで2になって、本当に無駄だった機能を消して、リクエストの内容がだいぶかわった  
++ `external_id` と `external_user_id` が混在してたため、`external_user_id` に統一しました、突然ごめん
 ~~ヘッダーがキモくなった原因の1つのセントリートレースはログの監視用だから無くても動くけど、PayPayのことだから凍結されないか心配なのでつけておいたほうが良いはず~~ -> 突然消えた  
 端末の向き(xyz？)はなんで収集するようになったか全然分からない…  
 ###### ~~ユーザーエージェントはiPhone8 (iOS 16.7.5) トラフィック確認に使った端末がiPhone8だから~~  
@@ -190,4 +196,4 @@ Botは効率が良すぎる...
 iOS 14.8はAndroid 10より2年も新しいのにPayPayに限らずほとんどのアプリが切られてしまった... iOSは寿命が短くて困る... (S9はOneUI 2.1 / Android 10)
 ## コンタクト  
 Discord サーバー / https://discord.gg/g4UE3kQbmS  
-Discord ユーザー名 / .taka.  
+Discord ユーザー名 / _.taka  
