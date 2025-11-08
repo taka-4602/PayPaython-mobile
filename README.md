@@ -1,10 +1,11 @@
 # PayPaython-mobile ![icon](https://raw.githubusercontent.com/taka-4602/PayPaython/main/images/1.png)
-Python用のPayPayモバイルAPIラッパー
+Python用のPayPayモバイルAPIラッパー  
+(2025/11/7にBot検知が追加されて死亡してます。 解決済みだけどアップロードするかどうかは迷い中)
 ## インストール
 ```py
 pip install paypaython-mobile
 ```
-必須：requests, pkce
+必須：requests, pkce, (もしアップデートされたらpyscryptも必要になる)
 ## [ ! ] PayPayからのレスポンス集 -> *[PayPayResponce.md](https://github.com/taka-4602/PayPaython/blob/main/PAYPAYRESPONCE.md)*
 PayPay APIを使った時に返されるレスポンスをまとめたドキュメントです  
 返ってきたレスポンスにどんな意味があるか知りたい場合、このドキュメントが役に立つかもしれません   
@@ -193,7 +194,10 @@ Botは効率が良すぎる...
 ###### ~~ユーザーエージェントはiPhone8 (iOS 16.7.5) トラフィック確認に使った端末がiPhone8だから~~  
 ###### ~~実機はiOS 14.8だけどユーザーエージェントは16.7.5に変えている (というかPayPayは最近iOS 14のサポートを終了したみたい...)~~  
 ユーザーエージェントがiPhone8からKDDI版Samsung S9 (SCV38)に変更されました (iOS 14.8のPayPayアップデートはとっくに切られた)  
-iOS 14.8はAndroid 10より2年も新しいのにPayPayに限らずほとんどのアプリが切られてしまった... iOSは寿命が短くて困る... (S9はOneUI 2.1 / Android 10)
+iOS 14.8はAndroid 10より2年も新しいのにPayPayに限らずほとんどのアプリが切られてしまった... iOSは寿命が短くて困る... (S9はOneUI 2.1 / Android 10)  
+### 2025/11/7になんかまたBot検知が追加された
+ログイン時にAmazonのBot検知が追加されたせいで、新規ログインが死んでしまった  
+いちおう解決済みだけど、アップロードしてまたよくわからない検知が追加されたらめんどくさいので迷い中
 ## コンタクト  
 Discord サーバー / https://discord.gg/g4UE3kQbmS  
 Discord ユーザー名 / _.taka  
