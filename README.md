@@ -1,7 +1,12 @@
 # PayPaython-mobile ![icon](https://raw.githubusercontent.com/taka-4602/PayPaython/main/images/1.png)
 Python用のPayPayモバイルAPIラッパー  
 (2025/11/7にBot検知が追加されて死亡してます。 解決済みだけどアップロードするかどうかは迷い中)  
-(2026/3/7あたりにBot検知がアップデートされた。最新の対策もアップロードするかはやはり検討中)
+(2026/3/7あたりにBot検知がアップデートされた。最新の対策もアップロードするかはやはり検討中)  
+現在、このリポジトリーのログインのコードは死んでいます  
+アクセストークンが欲しい場合は、僕が運営しているBotにて1500円で入手できます  
+以下のリンクから参加できます  
+### https://discord.gg/T9R3JpNV7W
+![screenshot](https://raw.githubusercontent.com/taka-4602/PayPaython-mobile/refs/heads/main/images/image.png)
 ## インストール
 ```py
 pip install paypaython-mobile
