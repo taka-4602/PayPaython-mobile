@@ -29,7 +29,7 @@ PayPayのサポートに連絡することで早く解除してもらえるみ�
 from PayPaython_mobile import PayPay
 
 paypay=PayPay("080-1234-5678","Unko-1234")#電話番号とパスワードでログインスタート、ハイフンはありでもなしでも。
-paypay.login()
+paypay.login()#バージョン4.0からは、ここでログインが開始される
 url=input("URL?: ")#URLと書いてあるけどIDだけでもOK
 paypay.login_confirm(url)#URLなら https://www.paypay.ne.jp/portal/oauth2/l?id=TK4602 をそのままいれる、IDをいれるなら id=の横、TK4602
 print(paypay.access_token)#アクセストークンは90日有効
@@ -40,6 +40,7 @@ print(paypay.client_uuid)#クライアントUUIDは特に必要ない
 #アクセストークンならログイン作業自体をスキップできる
 
 paypay=PayPay("080-1234-5678","Unko-1234","登録済みのデバイスUUID",proxy=None)#プロキシはdictでもstrでもOK、str="http://host:port" http://が無くてもOK
+paypay.login()
 print(paypay.access_token)
 print(paypay.refresh_token)
 #URLを入力する必要はない
