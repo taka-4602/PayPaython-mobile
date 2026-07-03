@@ -11,7 +11,7 @@ Python用のPayPayモバイルAPIラッパー
 ```py
 pip install paypaython-mobile
 ```
-必須：requests, pkce, (もしアップデートされたらpyscryptも必要になる)
+必須：requests, pkce  
 ## [ ! ] PayPayからのレスポンス集 -> *[PayPayResponce.md](https://github.com/taka-4602/PayPaython/blob/main/PAYPAYRESPONCE.md)*
 PayPay APIを使った時に返されるレスポンスをまとめたドキュメントです  
 返ってきたレスポンスにどんな意味があるか知りたい場合、このドキュメントが役に立つかもしれません   
@@ -29,8 +29,9 @@ PayPayのサポートに連絡することで早く解除してもらえるみ�
 from PayPaython_mobile import PayPay
 
 paypay=PayPay("080-1234-5678","Unko-1234")#電話番号とパスワードでログインスタート、ハイフンはありでもなしでも。
+paypay.login()
 url=input("URL?: ")#URLと書いてあるけどIDだけでもOK
-paypay.login(url)#URLなら https://www.paypay.ne.jp/portal/oauth2/l?id=TK4602 をそのままいれる、IDをいれるなら id=の横、TK4602
+paypay.login_confirm(url)#URLなら https://www.paypay.ne.jp/portal/oauth2/l?id=TK4602 をそのままいれる、IDをいれるなら id=の横、TK4602
 print(paypay.access_token)#アクセストークンは90日有効
 print(paypay.refresh_token)
 print(paypay.device_uuid)#デバイスUUIDで登録デバイスを管理してるぽい
@@ -110,6 +111,10 @@ print(initialize_chatroom.chatroom_id)#見つかったユーザーのチャッ�
 get_barcode_info=paypay.get_barcode_info("https://qr.paypay.ne.jp/.............")#URLをそのまま投げてPayPay請求リンクから情報を取得する
 print(get_barcode_info.amount)#請求金額: 請求リンクに金額が指定されていなかったら None になる
 print(get_barcode_info.external_user_id)#ここに .send_money の receiver_id に入れるExternalIDがある
+
+paypay.cashout_to_paypaybank(100)#PayPay銀行へ出金
+
+paypay.pay_qr_code(url)#webで出てくるQRコード送金決済をする
 ```
 WebAPIに比べてすごく長い、でも機能はたくさん  
 #コメントで使い方は書いてるしそれが全部  
@@ -124,6 +129,7 @@ WebAPIに比べてすごく長い、でも機能はたくさん
 電話番号、パスワード、登録済みDevice_UUIDを使うとワンタイムURLなしでログインできます  
 ```py
 paypay=PayPay("080-1234-5678","Unko-1234","登録済みのデバイスUUID",proxy=None)
+paypay.login()
 print(paypay.access_token)
 print(paypay.refresh_token)
 #URLを入力する必要はない
@@ -137,15 +143,10 @@ paypay=PayPay(access_token="アクセストークン")
 ```
 ###### アクセストークンは90日間有効みたいで、WebAPIの1080倍長持ち！  
 ###### そういえばいつのまにか4桁のOTPは廃止になった  
-### ログインのリフレッシュ
-上記にあるように電話番号、パスワード、デバイスUUIDでログインすることでワンタイムURLなしにログインをリフレッシュできるけど、```token_refresh```を使う方がスマート  
-```py
-paypay.token_refresh("ここにリフレッシュトークン")#アクセストークンは90日で失効するので失効したらリフレッシュしよう
-print(paypay.access_token)
-print(paypay.refresh_token)
-#↑ここ2つはリフレッシュ後のものを返すようになる
-```
-ログインをファイルとかに保存する場合はどっちも保存しておいたほうがベター
+~~### ログインのリフレッシュ~~
+~~上記にあるように電話番号、パスワード、デバイスUUIDでログインすることでワンタイムURLなしにログインをリフレッシュできるけど、```token_refresh```を使う方がスマート~~  
+~~ログインをファイルとかに保存する場合はどっちも保存しておいたほうがベター~~  
+突然消えました、つまり登録済みUUIDを使って再ログインするしかない (別になんの問題も無いけど)
 ### PayPayのDM
 なぜか自分に送れるし成功って言われる (送金 / 受け取り履歴のところにメッセージが送られる)  
 リンクチェックをした時にDM送る用のチャットルームIDが返ってくる  
@@ -194,8 +195,11 @@ Botは効率が良すぎる...
 ### 余談
 久しぶりに中身を大幅に更新しました、でもユーザー目線だと違いがわかりにくい **だけど1.xと2.xには互換性がない**  
 バージョンが1.xを飛んで2になって、本当に無駄だった機能を消して、リクエストの内容がだいぶかわった  
-+ `external_id` と `external_user_id` が混在してたため、`external_user_id` に統一しました、突然ごめん
-~~ヘッダーがキモくなった原因の1つのセントリートレースはログの監視用だから無くても動くけど、PayPayのことだから凍結されないか心配なのでつけておいたほうが良いはず~~ -> 突然消えた  
++ `external_id` と `external_user_id` が混在してたため、`external_user_id` に統一しました、突然ごめん  
+
+また中身を大幅に更新しました、現在のバージョンは4.0です  
+4.0未満のコードではインスタンスの初期化と同時にログインが開始されていましたが、`paypay.login`でログインを開始するようにしました、`paypay.login_confirm`でログイン用OTLを入力します  
+~~ヘッダーがキモくなった原因の1つのセントリートレースはログの監視用だから無くても動くけど、PayPayのことだから凍結されないか心配なのでつけておいたほうが良いはず~~ -> ~~突然消えた~~ -> また復活したけど、今はコメントアウトされている  
 端末の向き(xyz？)はなんで収集するようになったか全然分からない…  
 ###### ~~ユーザーエージェントはiPhone8 (iOS 16.7.5) トラフィック確認に使った端末がiPhone8だから~~  
 ###### ~~実機はiOS 14.8だけどユーザーエージェントは16.7.5に変えている (というかPayPayは最近iOS 14のサポートを終了したみたい...)~~  
