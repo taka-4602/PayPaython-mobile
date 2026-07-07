@@ -1,3 +1,4 @@
+import asyncio
 import time
 import random
 from uuid import uuid4
@@ -5,6 +6,9 @@ from typing import NamedTuple
 
 import requests
 import pkce
+
+from .aws.aws import AwsWaf
+
 
 
 '''def generate_sentry():
@@ -196,17 +200,15 @@ class PayPay():
             self.access_token = access_token
             self.session.headers["Authorization"] = f"Bearer {self.access_token}"
             self.session.headers["content-type"] = "application/json"
+    
 
-
-    def request(self, method: str, url: str, **kwargs):
-        if not self.access_token:
-            raise PayPayLoginError("まずはログインしてください")
+    async def request(self, method: str, url: str, **kwargs):
 
         if method.lower() == "get":
-            response = self.session.get(url, **kwargs)
+            response = await asyncio.to_thread(self.session.get, url, **kwargs)
 
         elif method.lower() == "post":
-            response = self.session.post(url, **kwargs)
+            response = await asyncio.to_thread(self.session.post, url, **kwargs)
 
         else:
             raise ValueError("Invalid HTTP method. Use 'get' or 'post'.")
@@ -225,17 +227,17 @@ class PayPay():
 
             elif result_code == "S4002":
                 pass
-
+                
             elif result_code == "S5000":
                 raise PayPayError("チャットルームが見つかりませんでした")
-
+            
             elif result_code != "S0000":
                 try:
                     if response_json["error"]["backendResultCode"] == "42007013":
                         raise P2PTemporaryHoldError(response_json)
                 except:
                     pass
-
+                
                 try:
                     if response_json["error"]["displayErrorResponse"]["description"] == "しばらく時間をおいて、再度お試しください":
                         raise PayPayError("レート制限に達しました")
@@ -243,10 +245,10 @@ class PayPay():
                     pass
 
                 raise PayPayError(response_json)
-
+        
         return response_json
 
-    def login(self):
+    async def login(self):
         if not self.phone:
             raise PayPayLoginError("電話番号を入力してください")
 
@@ -270,8 +272,8 @@ class PayPay():
             "prompt": "",
             "uiLocales": "ja"
         }
-
-        response = self.request("post", "https://app4.paypay.ne.jp/bff/v2/oauth2/par?payPayLang=ja", data=payload)
+        
+        response = await self.request("post", "https://app4.paypay.ne.jp/bff/v2/oauth2/par?payPayLang=ja", data=payload)
 
         if response["header"]["resultCode"] != "S0000":
             raise PayPayLoginError(response)
@@ -300,11 +302,16 @@ class PayPay():
             "client_id": "pay2-mobile-app-client",
             "request_uri": response["payload"]["requestUri"]
         }
-        response = self.request("get", f"https://www.paypay.ne.jp/portal/api/v2/oauth2/authorize", headers=headers, params=params)
-        raise PayPayLoginError("このモジュールは現在、アンチボット対策を実装していません\nアクセストークンが欲しい場合は\nhttps://github.com/taka-4602/PayPaython-mobile\nへアクセスして、ドキュメントを確認してください")
+        response = await self.request("get", f"https://www.paypay.ne.jp/portal/api/v2/oauth2/authorize", headers=headers, params=params)
+        goku, host = AwsWaf.extract(response.text)
 
-        response = self.session.get(f"https://www.paypay.ne.jp/portal/api/v2/oauth2/authorize", headers=headers, params=params, allow_redirects=False)
+        async with AwsWaf(goku, host, "www.paypay.ne.jp", proxy=self.proxy) as waf:
+            token = await waf.get_token()
 
+        self.session.cookies.set("aws-waf-token", token)
+
+        response = await asyncio.to_thread(self.session.get, f"https://www.paypay.ne.jp/portal/api/v2/oauth2/authorize", headers=headers, params=params, allow_redirects=False)
+        
         if "Found. Redirecting to" not in response.text:
             raise PayPayLoginError("AWSに負けました")
 
@@ -312,7 +319,7 @@ class PayPay():
             "client_id": "pay2-mobile-app-client",
             "mode": "landing"
         }
-        response = self.session.get("https://www.paypay.ne.jp/portal/oauth2/sign-in", headers=headers, params=params)
+        response = await asyncio.to_thread(self.session.get, "https://www.paypay.ne.jp/portal/oauth2/sign-in", headers=headers, params=params)
         if response.status_code > 400:
             raise PayPayLoginError("サインインページの取得に失敗しました")
 
@@ -339,7 +346,7 @@ class PayPay():
             "User-Agent": f"Mozilla/5.0 (Linux; Android 10; SCV38 Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/132.0.6834.163 Mobile Safari/537.36 jp.pay2.app.android/{self.version}",
             "X-Requested-With": "jp.ne.paypay.android.app"
         }
-        response = self.session.get("https://www.paypay.ne.jp/portal/api/v2/oauth2/par/check", headers=headers)
+        response = await asyncio.to_thread(self.session.get, "https://www.paypay.ne.jp/portal/api/v2/oauth2/par/check", headers=headers)
         par_check = response.json()
         if par_check["header"]["resultCode"] != "S0000":
             raise PayPayLoginError(par_check)
@@ -377,7 +384,7 @@ class PayPay():
             "password": self.password,
             "signInAttemptCount": 1
         }
-        response = self.session.post("https://www.paypay.ne.jp/portal/api/v2/oauth2/sign-in/password", headers=headers, json=payload)
+        response = await asyncio.to_thread(self.session.post, "https://www.paypay.ne.jp/portal/api/v2/oauth2/sign-in/password", headers=headers, json=payload)
         signin = response.json()
         if signin["header"]["resultCode"] != "S0000":
             raise PayPayLoginError(signin)
@@ -400,7 +407,7 @@ class PayPay():
                 "code": uri[0].replace("code=", ""),
                 "codeVerifier": self.code_verifier
             }
-            response = self.session.post("https://app4.paypay.ne.jp/bff/v2/oauth2/token", headers=headers, data=confirm_data, params=self.params)
+            response = await asyncio.to_thread(self.session.post, "https://app4.paypay.ne.jp/bff/v2/oauth2/token", headers=headers, data=confirm_data, params=self.params)
             get_token = response.json()
             if get_token["header"]["resultCode"] != "S0000":
                 raise PayPayLoginError(get_token)
@@ -412,7 +419,7 @@ class PayPay():
             self.session.headers = update_header_device_state(self.session.headers)
 
         else:
-            response = self.session.post("https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/code-grant/update", headers=headers, json={})
+            response = await asyncio.to_thread(self.session.post, "https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/code-grant/update", headers=headers, json={})
             code_update = response.json()
             if code_update["header"]["resultCode"] != "S0000":
                 raise PayPayLoginError(code_update)
@@ -432,18 +439,18 @@ class PayPay():
                 }
             }
 
-            response = self.session.post("https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/code-grant/update", headers=headers, json=payload)
+            response = await asyncio.to_thread(self.session.post, "https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/code-grant/update", headers=headers, json=payload)
             nav_2fa = response.json()
             if nav_2fa["header"]["resultCode"] != "S0000":
                 raise PayPayLoginError(nav_2fa)
 
             headers["Referer"] = "https://www.paypay.ne.jp/portal/oauth2/otl-request?client_id=pay2-mobile-app-client&mode=navigation-2fa"
-            response = self.session.post("https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/code-grant/side-channel/next-action-polling", headers=headers, json={"waitUntil": "PT5S"})
+            response = await asyncio.to_thread(self.session.post, "https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/code-grant/side-channel/next-action-polling", headers=headers, json={"waitUntil": "PT5S"})
             otl_request = response.json()
             if otl_request["header"]["resultCode"] != "S0000":
                 raise PayPayLoginError(otl_request)
 
-    def login_confirm(self, url: str):
+    async def login_confirm(self, url: str):
         if self.session.headers.get("Authorization"):
             return "already logged in"
 
@@ -478,7 +485,7 @@ class PayPay():
             "User-Agent": f"Mozilla/5.0 (Linux; Android 10; SCV38 Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/132.0.6834.163 Mobile Safari/537.36 jp.pay2.app.android/{self.version}",
             "X-Requested-With": "jp.ne.paypay.android.app"
         }
-        response = self.session.post("https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/sign-in/2fa/otl/verify", headers=headers, json={"code": url})
+        response = await asyncio.to_thread(self.session.post, "https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/sign-in/2fa/otl/verify", headers=headers, json={"code": url})
         confirm_url = response.json()
         if confirm_url["header"]["resultCode"] != "S0000":
             raise PayPayLoginError(confirm_url)
@@ -492,7 +499,7 @@ class PayPay():
                 }
             }
         }
-        response = self.session.post("https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/code-grant/update", headers=headers, json=payload)
+        response = await asyncio.to_thread(self.session.post, "https://www.paypay.ne.jp/portal/api/v2/oauth2/extension/code-grant/update", headers=headers, json=payload)
         get_uri = response.json()
         if get_uri["header"]["resultCode"] != "S0000":
             raise PayPayLoginError(get_uri)
@@ -514,7 +521,7 @@ class PayPay():
             "code": uri[0].replace("code=", ""),
             "codeVerifier": self.code_verifier
         }
-        response = self.session.post("https://app4.paypay.ne.jp/bff/v2/oauth2/token", headers=headers, data=confirm_data, params=self.params)
+        response = await asyncio.to_thread(self.session.post, "https://app4.paypay.ne.jp/bff/v2/oauth2/token", headers=headers, data=confirm_data, params=self.params)
         get_token = response.json()
         if get_token["header"]["resultCode"] != "S0000":
             raise PayPayLoginError(get_token)
@@ -527,7 +534,7 @@ class PayPay():
 
         return get_token
 
-    def get_history(self, size: int = 20, cashback: bool = False) -> dict:
+    async def get_history(self, size: int = 20, cashback: bool = False) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -542,11 +549,11 @@ class PayPay():
         if cashback:
             params["orderTypes"] = "CASHBACK"
 
-        response = self.request("get", f"https://app4.paypay.ne.jp/bff/v4/getPaymentHistory", params=params)
+        response = await self.request("get", f"https://app4.paypay.ne.jp/bff/v4/getPaymentHistory", params=params)
 
         return response
 
-    def get_balance(self):
+    async def get_balance(self):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -563,7 +570,7 @@ class PayPay():
             "includeGiftVoucherInfo": "true",
             "payPayLang": "ja"
         }
-        response = self.request("get", "https://app4.paypay.ne.jp/bff/v1/getBalanceInfo", params=params)
+        response = await self.request("get", "https://app4.paypay.ne.jp/bff/v1/getBalanceInfo", params=params)
 
         try:
             money = response["payload"]["walletDetail"]["emoneyBalanceInfo"]["balance"]
@@ -587,7 +594,7 @@ class PayPay():
 
         return GetBalance(money, money_light, all_balance, useable_balance, points, bank_balance, response)
 
-    def link_check(self, url: str, web_api: bool = False):
+    async def link_check(self, url: str, web_api: bool = False):
         if "https://" in url:
             url = url.replace("https://pay.paypay.ne.jp/", "")
 
@@ -597,7 +604,7 @@ class PayPay():
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
                 "Content-Type": "application/json"
             }
-            response = self.session.get(f"https://www.paypay.ne.jp/app/v2/p2p-api/getP2PLinkInfo?verificationCode={url}", headers=headers)
+            response = await asyncio.to_thread(self.session.get, f"https://www.paypay.ne.jp/app/v2/p2p-api/getP2PLinkInfo?verificationCode={url}", headers=headers)
             link_info = response.json()
 
         else:
@@ -609,7 +616,7 @@ class PayPay():
                 "verificationCode": url,
                 "payPayLang": "ja"
             }
-            link_info = self.request("get", "https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo", params=params)
+            link_info = await self.request("get", "https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo", params=params)
 
 
         sender_name = link_info["payload"]["sender"]["displayName"]
@@ -625,7 +632,7 @@ class PayPay():
 
         return LinkInfo(sender_name, sender_external_user_id, sender_icon, order_id, chat_room_id, amount, status, money_light, money, has_password, link_info)
 
-    def link_receive(self, url: str, passcode: str = None, link_info: dict | LinkInfo = None) -> dict:
+    async def link_receive(self, url: str, passcode: str = None, link_info: dict | LinkInfo = None) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -634,10 +641,10 @@ class PayPay():
                 int(passcode)
                 if len(passcode) != 4:
                     raise PayPayError("パスコードは4桁の数字で入力してください")
-
+            
         except:
             raise PayPayError("パスコードは4桁の数字で入力してください")
-
+        
 
         if "https://" in url:
             url = url.replace("https://pay.paypay.ne.jp/", "")
@@ -651,7 +658,7 @@ class PayPay():
                 "verificationCode": url,
                 "payPayLang": "ja"
             }
-            link_info = self.request("get", "https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo", params=params)
+            link_info = await self.request("get", "https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo", params=params)
 
         payload = {
             "requestId": str(uuid4()),
@@ -668,10 +675,10 @@ class PayPay():
 
         elif order_status == LinkStatus.SUCCESS:
             raise PayPayError("すでに受け取り済みのリンクです")
-
+        
         elif order_status == LinkStatus.REJECTED:
             raise PayPayError("すでに辞退済みのリンクです")
-
+        
         elif order_status == LinkStatus.FAILED:
             raise PayPayError("すでにキャンセル済みのリンクです")
 
@@ -682,12 +689,12 @@ class PayPay():
         if link_info["payload"]["pendingP2PInfo"]["isSetPasscode"]:
             payload["passcode"] = passcode
 
-
-        response = self.request("post", "https://app4.paypay.ne.jp/bff/v2/acceptP2PSendMoneyLink", json=payload, params={"payPayLang": "ja", "appContext": "P2PMoneyTransferDetailScreen_linkReceiver"})
+        
+        response = await self.request("post", "https://app4.paypay.ne.jp/bff/v2/acceptP2PSendMoneyLink", json=payload, params={"payPayLang": "ja", "appContext": "P2PMoneyTransferDetailScreen_linkReceiver"})
 
         return response
 
-    def link_reject(self, url: str, link_info: dict | LinkInfo = None) -> dict:
+    async def link_reject(self, url: str, link_info: dict | LinkInfo = None) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -697,13 +704,13 @@ class PayPay():
         if link_info:
             if isinstance(link_info, LinkInfo):
                 link_info = link_info.raw
-
+        
         else:
             params = {
                 "verificationCode": url,
                 "payPayLang": "ja"
             }
-            link_info = self.request("get", "https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo", params=params)
+            link_info = await self.request("get", "https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo", params=params)
 
         payload = {
             "requestId": str(uuid4()),
@@ -712,25 +719,25 @@ class PayPay():
             "senderMessageId": link_info["payload"]["message"]["messageId"],
             "senderChannelUrl": link_info["payload"]["message"]["chatRoomId"]
         }
-
+        
         order_status = link_info["payload"]["orderStatus"]
         if order_status == LinkStatus.PENDING:
             pass
 
         elif order_status == LinkStatus.SUCCESS:
             raise PayPayError("すでに受け取り済みのリンクです")
-
+        
         elif order_status == LinkStatus.REJECTED:
             raise PayPayError("すでに辞退済みのリンクです")
-
+        
         elif order_status == LinkStatus.FAILED:
             raise PayPayError("すでにキャンセル済みのリンクです")
 
-        response = self.request("post", "https://app4.paypay.ne.jp/bff/v2/rejectP2PSendMoneyLink", json=payload, params=self.params)
+        response = await self.request("post", "https://app4.paypay.ne.jp/bff/v2/rejectP2PSendMoneyLink", json=payload, params=self.params)
 
         return response
 
-    def link_cancel(self, url: str, link_info: dict | LinkInfo = None) -> dict:
+    async def link_cancel(self, url: str, link_info: dict | LinkInfo = None) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -740,38 +747,38 @@ class PayPay():
         if link_info:
             if isinstance(link_info, LinkInfo):
                 link_info = link_info.raw
-
+        
         else:
             params = {
                 "verificationCode": url,
                 "payPayLang": "ja"
             }
-            link_info = self.request("get", "https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo", params=params)
+            link_info = await self.request("get", "https://app4.paypay.ne.jp/bff/v2/getP2PLinkInfo", params=params)
 
         payload = {
             "orderId": link_info["payload"]["pendingP2PInfo"]["orderId"],
             "requestId": str(uuid4()),
             "verificationCode": url,
         }
-
+        
         order_status = link_info["payload"]["orderStatus"]
         if order_status == LinkStatus.PENDING:
             pass
 
         elif order_status == LinkStatus.SUCCESS:
             raise PayPayError("すでに受け取り済みのリンクです")
-
+        
         elif order_status == LinkStatus.REJECTED:
             raise PayPayError("すでに辞退済みのリンクです")
-
+        
         elif order_status == LinkStatus.FAILED:
             raise PayPayError("すでにキャンセル済みのリンクです")
 
-        response = self.request("post", "https://app4.paypay.ne.jp/p2p/v1/cancelP2PSendMoneyLink", json=payload, params=self.params)
+        response = await self.request("post", "https://app4.paypay.ne.jp/p2p/v1/cancelP2PSendMoneyLink", json=payload, params=self.params)
 
         return response
 
-    def create_link(self, amount: int, passcode: str = None, pochibukuro: bool = False, theme: str = "default-sendmoney"):
+    async def create_link(self, amount: int, passcode: str = None, pochibukuro: bool = False, theme: str = "default-sendmoney"):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -790,7 +797,7 @@ class PayPay():
         if pochibukuro:
             payload["theme"] = "pochibukuro"
 
-        response = self.request("post", "https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoneyLink", json=payload, params=self.params)
+        response = await self.request("post", "https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoneyLink", json=payload, params=self.params)
 
         class CreateLink(NamedTuple):
             link: str
@@ -804,7 +811,7 @@ class PayPay():
 
         return CreateLink(link, chat_room_id, order_id, response)
 
-    def send_money(self, amount: int, receiver_id: str, pochibukuro: bool = False, theme: str = "default-sendmoney"):
+    async def send_money(self, amount: int, receiver_id: str, pochibukuro: bool = False, theme: str = "default-sendmoney"):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -824,17 +831,17 @@ class PayPay():
         if pochibukuro:
             payload["theme"] = "pochibukuro"
 
-        response = self.request("post", f"https://app4.paypay.ne.jp/p2p/v3/executeP2PSendMoney", json=payload, params=self.params)
+        response = await self.request("post", f"https://app4.paypay.ne.jp/p2p/v3/executeP2PSendMoney", json=payload, params=self.params)
 
         if response["header"]["resultCode"] == "S4002":
             print(response["header"]["resultMessage"])
             print("waiting 5 seconds and retrying...")
 
-            time.sleep(5)
+            await asyncio.sleep(5)
             payload["ackRiskError"] = True
             payload["ackPhoneCallDetected"] = True
 
-            response = self.request("post", f"https://app4.paypay.ne.jp/p2p/v3/executeP2PSendMoney", json=payload, params=self.params)
+            response = await self.request("post", f"https://app4.paypay.ne.jp/p2p/v3/executeP2PSendMoney", json=payload, params=self.params)
 
         class SendMoney(NamedTuple):
             chat_room_id: str
@@ -846,7 +853,7 @@ class PayPay():
 
         return SendMoney(chat_room_id, order_id, response)
 
-    def send_message(self, chat_room_id: str, message: str) -> dict:
+    async def send_message(self, chat_room_id: str, message: str) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -859,11 +866,11 @@ class PayPay():
             }
         }
 
-        response = self.request("post", "https://app4.paypay.ne.jp/p2p/v1/sendP2PMessage", json=payload, params=self.params)
+        response = await self.request("post", "https://app4.paypay.ne.jp/p2p/v1/sendP2PMessage", json=payload, params=self.params)
 
         return response
 
-    def create_p2pcode(self, amount: int = None):
+    async def create_p2pcode(self, amount: int = None):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -875,7 +882,7 @@ class PayPay():
             payload["amount"] = amount
             payload["sessionId"] = str(uuid4())
 
-        create_p2pcode = self.request("post", "https://app4.paypay.ne.jp/bff/v1/createP2PCode", json=payload, params=self.params)
+        create_p2pcode = await self.request("post", "https://app4.paypay.ne.jp/bff/v1/createP2PCode", json=payload, params=self.params)
 
         class P2PCode(NamedTuple):
             p2pcode: str
@@ -885,11 +892,11 @@ class PayPay():
 
         return P2PCode(p2pcode, create_p2pcode)
 
-    def get_profile(self):
+    async def get_profile(self):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
-        response = self.request("get", "https://app4.paypay.ne.jp/bff/v2/getProfileDisplayInfo", params={"includeExternalProfileSync": "true", "completedOptionalTasks": "ENABLED_NEARBY_DEALS", "payPayLang": "ja"})
+        response = await self.request("get", "https://app4.paypay.ne.jp/bff/v2/getProfileDisplayInfo", params={"includeExternalProfileSync": "true", "completedOptionalTasks": "ENABLED_NEARBY_DEALS", "payPayLang": "ja"})
 
         class Profile(NamedTuple):
             name: str
@@ -903,7 +910,7 @@ class PayPay():
 
         return Profile(name, external_user_id, icon, response)
 
-    def set_money_priority(self, paypay_money: bool = False) -> dict:
+    async def set_money_priority(self, paypay_money: bool = False) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -912,11 +919,11 @@ class PayPay():
         else:
             payload = {"moneyPriority": "MONEY_LITE_FIRST"}
 
-        response = self.request("post", "https://app4.paypay.ne.jp/p2p/v1/setMoneyPriority", json=payload, params={"payPayLang": "ja"})
+        response = await self.request("post", "https://app4.paypay.ne.jp/p2p/v1/setMoneyPriority", json=payload, params={"payPayLang": "ja"})
 
         return response
 
-    def get_chat_rooms(self, size: int = 20, last_message: bool = True):
+    async def get_chat_rooms(self, size: int = 20, last_message: bool = True):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -927,11 +934,11 @@ class PayPay():
             "socketConnection": "P2P",
             "payPayLang": "ja"
         }
-        response = self.request("get", "https://app4.paypay.ne.jp/p2p/v1/getP2PChatRoomListLite", params=params)
+        response = await self.request("get", "https://app4.paypay.ne.jp/p2p/v1/getP2PChatRoomListLite", params=params)
 
         return response
 
-    def get_chat_room_messages(self, chat_room_id: str, prev: int = 15, next: int = 0, include: bool = False) -> dict:
+    async def get_chat_room_messages(self, chat_room_id: str, prev: int = 15, next: int = 0, include: bool = False) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -942,11 +949,11 @@ class PayPay():
             "next": str(next),
             "payPayLang": "ja"
         }
-        response = self.request("get", "https://app4.paypay.ne.jp/bff/v1/getP2PMessageList", params=params)
+        response = await self.request("get", "https://app4.paypay.ne.jp/bff/v1/getP2PMessageList", params=params)
 
         return response
 
-    def get_point_history(self) -> dict:
+    async def get_point_history(self) -> dict:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -959,11 +966,11 @@ class PayPay():
             "isOverdraftOnly": "false",
             "payPayLang": "ja"
         }
-        response = self.request("get", "https://app4.paypay.ne.jp/bff/v3/getPaymentHistory", params=params)
+        response = await self.request("get", "https://app4.paypay.ne.jp/bff/v3/getPaymentHistory", params=params)
 
         return response
 
-    def search_p2puser(self, user_id: str, size: int = 10, is_global: bool = False, order: int = 0):
+    async def search_p2puser(self, user_id: str, size: int = 10, is_global: bool = False, order: int = 0):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -978,7 +985,7 @@ class PayPay():
         if is_global:
             payload["searchTypes"] = "GLOBAL_SEARCH"
 
-        response = self.request("post", "https://app4.paypay.ne.jp/p2p/v3/searchP2PUser", json=payload, params=self.params)
+        response = await self.request("post", "https://app4.paypay.ne.jp/p2p/v3/searchP2PUser", json=payload, params=self.params)
         if response["header"]["resultCode"] != "S0000":
             raise PayPayError(response)
 
@@ -1003,7 +1010,7 @@ class PayPay():
 
         return P2PUser(name, icon, external_user_id, response)
 
-    def initialize_chatroom(self, external_user_id: str):
+    async def initialize_chatroom(self, external_user_id: str):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -1013,7 +1020,7 @@ class PayPay():
             "externalUserId": external_user_id,
             "socketConnection": "P2P"
         }
-        response = self.request("post", "https://app4.paypay.ne.jp/p2p/v1/initialiseOneToOneAndLinkChatRoom", json=payload, params=self.params)
+        response = await self.request("post", "https://app4.paypay.ne.jp/p2p/v1/initialiseOneToOneAndLinkChatRoom", json=payload, params=self.params)
 
         class InitializeChatRoom(NamedTuple):
             chatroom_id: str
@@ -1023,7 +1030,7 @@ class PayPay():
 
         return InitializeChatRoom(chatroom_id, response)
 
-    def get_barcode_info(self, url: str):
+    async def get_barcode_info(self, url: str):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
@@ -1035,7 +1042,7 @@ class PayPay():
             #"lastSelectedHomePaymentMethodType": "PAY_LATER_CC",
             "payPayLang": "ja"
         }
-        barcode = self.request("get", "https://app4.paypay.ne.jp/bff/v2/getBarcodeInfo", params=params)
+        barcode = await self.request("get", "https://app4.paypay.ne.jp/bff/v2/getBarcodeInfo", params=params)
 
         class BarcodeInfo(NamedTuple):
             amount: int
@@ -1052,11 +1059,11 @@ class PayPay():
             raw=barcode
         )
 
-    def cashout_to_paypaybank(self, amount: int):
+    async def cashout_to_paypaybank(self, amount: int):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
-        payout_display_info = self.request("get", "https://app4.paypay.ne.jp/bff/v2/getPayoutDisplayInfo", params={"payPayLang": "ja"})
+        payout_display_info = await self.request("get", "https://app4.paypay.ne.jp/bff/v2/getPayoutDisplayInfo", params={"payPayLang": "ja"})
         self_payout_methods = payout_display_info["payload"]["selfPayoutMethodInfoList"]
         for method in self_payout_methods:
             if method["payoutBankInfo"]["bankName"] == "PayPay銀行":
@@ -1070,7 +1077,7 @@ class PayPay():
             "agreeSimilarTransactionFlag": False,
             "senderName": "ＰＡＹＰＡＹ"
         }
-        response = self.request("post", "https://app4.paypay.ne.jp/bff/v2/executePayout", json=payload, params=self.params)
+        response = await self.request("post", "https://app4.paypay.ne.jp/bff/v2/executePayout", json=payload, params=self.params)
 
         payout_info = response["payload"]["paymentInfo"]["orderTypeSpecificInfo"]["payoutInfo"]
 
@@ -1087,14 +1094,14 @@ class PayPay():
             bank_account_number=payout_info["bankAccountNumber"]
         )
 
-    def pay_qr_code(self, url: str):
+    async def pay_qr_code(self, url: str):
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
 
         if "https://qr.paypay.ne.jp/" in url:
             url = url.replace("https://qr.paypay.ne.jp/", "")
 
-        barcode_info = self.request("get", "https://app4.paypay.ne.jp/bff/v2/getBarcodeInfo?code=" + "https://qr.paypay.ne.jp/" + url, params={"payPayLang": "ja", "isScannedFromFile": "false"})
+        barcode_info = await self.request("get", "https://app4.paypay.ne.jp/bff/v2/getBarcodeInfo?code=" + "https://qr.paypay.ne.jp/" + url, params={"payPayLang": "ja", "isScannedFromFile": "false"})
         amount = barcode_info["payload"]["codeInfo"]["dynamicCodeInfo"]["amount"]
         payment_method_id = barcode_info["payload"]["paymentMethodInfo"]["paymentMethodIdString"]
         merchant_id = barcode_info["payload"]["codeInfo"]["dynamicCodeInfo"]["merchantInfo"]["merchantId"]
@@ -1116,7 +1123,7 @@ class PayPay():
             "mode": "DYNAMIC_QR"
         }
 
-        payment_result = self.request("post", "https://app4.paypay.ne.jp/bff/v2/executePayment", json=payload, params={"payPayLang": "ja"})
+        payment_result = await self.request("post", "https://app4.paypay.ne.jp/bff/v2/executePayment", json=payload, params={"payPayLang": "ja"})
 
         class PayQRCodeResult(NamedTuple):
             order_id: str
@@ -1138,15 +1145,17 @@ class PayPay():
             raw=payment_result
         )
 
-    def alive(self) -> bool:
+    async def alive(self) -> bool:
         if not self.access_token:
             raise PayPayLoginError("まずはログインしてください")
+
+        tasks = []
 
         params = {
             "payPayLang": "ja"
         }
 
-        self.request("get", "https://app4.paypay.ne.jp/bff/v1/getGlobalServiceStatus", params=params)
+        tasks.append(self.request("get", "https://app4.paypay.ne.jp/bff/v1/getGlobalServiceStatus", params=params))
 
         payload = {
             "abTestFlags": {
@@ -1159,7 +1168,7 @@ class PayPay():
             "networkStatus": "WIFI"
         }
 
-        self.request("post", "https://app4.paypay.ne.jp/bff/v4/getHomeDisplayInfo", params=params, json=payload)
+        tasks.append(self.request("post", "https://app4.paypay.ne.jp/bff/v4/getHomeDisplayInfo", params=params, json=payload))
 
         payload = {
             "flagNames": [
@@ -1180,6 +1189,8 @@ class PayPay():
             ]
         }
 
-        self.request("post", "https://app4.paypay.ne.jp/bff/v1/getFeatureFlagInfo", params=params, json=payload)
+        tasks.append(self.request("post", "https://app4.paypay.ne.jp/bff/v1/getFeatureFlagInfo", params=params, json=payload))
 
+        await asyncio.gather(*tasks)
+        
         return True
