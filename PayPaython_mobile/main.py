@@ -228,12 +228,6 @@ class PayPay():
 
             elif result_code != "S0000":
                 try:
-                    if response_json["error"]["backendResultCode"] == "42007013":
-                        raise P2PTemporaryHoldError(response_json)
-                except:
-                    pass
-
-                try:
                     if response_json["error"]["displayErrorResponse"]["description"] == "しばらく時間をおいて、再度お試しください":
                         raise PayPayError("レート制限に達しました")
                 except KeyError:
