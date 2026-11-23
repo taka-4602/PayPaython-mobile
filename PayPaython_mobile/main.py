@@ -7,18 +7,20 @@ import requests
 import pkce
 
 
-'''def generate_sentry():
+def generate_sentry():
     trace_id = uuid4().hex
     span_id = uuid4().hex[16:]
 
     class SENTRY_TRACE_SPAN(NamedTuple):
-        trace_id:str
-        span_id:str
-        sentry_trace:str
-        sentry_trace_0:str
-        sentry_trace_1:str
+        trace_id: str
+        span_id: str
+        sentry_trace: str
+        traceparent: str
 
-    return SENTRY_TRACE_SPAN(trace_id, span_id, f"{trace_id}-{span_id}", f"{trace_id}-{span_id}-0", f"{trace_id}-{span_id}-1")'''
+    return SENTRY_TRACE_SPAN(trace_id, span_id, f"{trace_id}-{span_id}", f"00-{trace_id}-{span_id}-00")
+
+
+SENTRY_PUBLIC_KEY = "paypay"
 
 
 def generate_vector(r1, r2, r3, precision=8):
@@ -97,7 +99,7 @@ class LinkInfo(NamedTuple):
     chat_room_id: str
     amount: int
     status: str
-    money_light: int
+    money_lite: int
     money: int
     has_password: bool
     raw: dict
@@ -108,6 +110,7 @@ class LinkStatus(NamedTuple):
     SUCCESS = "SUCCESS"
     REJECTED = "REJECTED"
     FAILED = "FAILED" # canceled by sender. why failed?
+    COMPLETED = "COMPLETED" # Accepted -> Completed
 
 
 class PayPayError(Exception):
@@ -115,10 +118,6 @@ class PayPayError(Exception):
 
 
 class PayPayLoginError(Exception):
-    pass
-
-
-class P2PTemporaryHoldError(Exception):
     pass
 
 
@@ -155,13 +154,14 @@ class PayPay():
             "payPayLang": "ja"
         }
 
-        self.version = "5.57.0"
+        self.version = "5.72.2"
 
         device_state = generate_device_state()
         self.session.headers = {
             "Accept": "*/*",
             "Accept-Charset": "UTF-8",
             "Accept-Encoding": "gzip",
+            "App-Mode": "domestic_automatic",
             "Client-Mode": "NORMAL",
             "Client-OS-Release-Version": "10",
             "Client-OS-Type": "ANDROID",
@@ -173,13 +173,15 @@ class PayPay():
             "Content-Type": "application/x-www-form-urlencoded",
             "Device-Acceleration": device_state.device_acceleration,
             "Device-Acceleration-2": device_state.device_acceleration_2,
+            "Device-App-Check": "FAILURE - INTEGRITY_FAILURE",
             "Device-Brand-Name": "KDDI",
             "Device-Hardware-Name": "qcom",
             "Device-In-Call": "false",
             "Device-Lock-App-Setting": "false",
-            "Device-Lock-Type": "NONE",
+            "Device-Lock-Type": "DEVICE",
             "Device-Manufacturer-Name": "samsung",
             "Device-Name": "SCV38",
+            "Device-Screen-Recording": "false",
             "Device-Orientation": device_state.device_orientation,
             "Device-Orientation-2": device_state.device_orientation_2,
             "Device-Rotation": device_state.device_rotation,
@@ -199,6 +201,17 @@ class PayPay():
 
 
     def request(self, method: str, url: str, **kwargs):
+
+        sentry_ids = generate_sentry()
+        self.session.headers["sentry-trace"] = sentry_ids.sentry_trace
+        self.session.headers["traceparent"] = sentry_ids.traceparent
+        self.session.headers["baggage"] = (
+            "sentry-environment=Production,sentry-public_key=paypay,"
+            f"sentry-release=consumer-android%40{self.version},"
+            f"sentry-sample_rand={random.random()},"
+            f"sentry-trace_id={sentry_ids.trace_id}"
+        )
+
         if method.lower() == "get":
             response = self.session.get(url, **kwargs)
 
@@ -560,20 +573,20 @@ class PayPay():
 
         class GetBalance(NamedTuple):
             money: int
-            money_light: int
+            money_lite: int
             all_balance: int
             useable_balance: int
             points: int
             bank_balance: int
             raw: dict
 
-        money_light = response["payload"]["walletDetail"]["prepaidBalanceInfo"]["balance"]
+        money_lite = response["payload"]["walletDetail"]["prepaidBalanceInfo"]["balance"]
         all_balance = response["payload"]["walletSummary"]["allTotalBalanceInfo"]["balance"]
         useable_balance = response["payload"]["walletSummary"]["usableBalanceInfoWithoutCashback"]["balance"]
         points = response["payload"]["walletDetail"]["cashBackBalanceInfo"]["balance"]
         bank_balance = response["payload"].get("payPayBankInfo", {}).get("amount")
 
-        return GetBalance(money, money_light, all_balance, useable_balance, points, bank_balance, response)
+        return GetBalance(money, money_lite, all_balance, useable_balance, points, bank_balance, response)
 
     def link_check(self, url: str, web_api: bool = False):
         if "https://" in url:
@@ -607,11 +620,11 @@ class PayPay():
         chat_room_id = link_info["payload"]["message"]["chatRoomId"]
         amount = link_info["payload"]["pendingP2PInfo"]["amount"]
         status = link_info["payload"]["message"]["data"]["status"]
-        money_light = link_info["payload"]["message"]["data"]["subWalletSplit"]["senderPrepaidAmount"]
+        money_lite = link_info["payload"]["message"]["data"]["subWalletSplit"]["senderPrepaidAmount"]
         money = link_info["payload"]["message"]["data"]["subWalletSplit"]["senderEmoneyAmount"]
         has_password = link_info["payload"]["pendingP2PInfo"]["isSetPasscode"]
 
-        return LinkInfo(sender_name, sender_external_user_id, sender_icon, order_id, chat_room_id, amount, status, money_light, money, has_password, link_info)
+        return LinkInfo(sender_name, sender_external_user_id, sender_icon, order_id, chat_room_id, amount, status, money_lite, money, has_password, link_info)
 
     def link_receive(self, url: str, passcode: str = None, link_info: dict | LinkInfo = None) -> dict:
         if not self.access_token:
@@ -662,6 +675,9 @@ class PayPay():
 
         elif order_status == LinkStatus.FAILED:
             raise PayPayError("すでにキャンセル済みのリンクです")
+
+        elif order_status == LinkStatus.COMPLETED:
+            raise PayPayError("すでに送金完了済みのリンクです")
 
 
         if link_info["payload"]["pendingP2PInfo"]["isSetPasscode"] and passcode == None:
@@ -910,7 +926,7 @@ class PayPay():
 
         params = {
             "pageSize": str(size),
-            "customTypes": "P2P_CHAT,P2P_CHAT_INACTIVE,P2P_PUBLIC_GROUP_CHAT,P2P_LINK,P2P_OLD",
+            "customTypes": "P2P_CHAT,P2P_OLD,P2P_CHAT_INACTIVE,P2P_LINK,P2P_PUBLIC_GROUP_CHAT",
             "requiresLastMessage": last_message,
             "socketConnection": "P2P",
             "payPayLang": "ja"
@@ -930,7 +946,7 @@ class PayPay():
             "next": str(next),
             "payPayLang": "ja"
         }
-        response = self.request("get", "https://app4.paypay.ne.jp/bff/v1/getP2PMessageList", params=params)
+        response = self.request("get", "https://app4.paypay.ne.jp/p2p/v1/getP2PMessageList", params=params)
 
         return response
 
@@ -947,7 +963,7 @@ class PayPay():
             "isOverdraftOnly": "false",
             "payPayLang": "ja"
         }
-        response = self.request("get", "https://app4.paypay.ne.jp/bff/v3/getPaymentHistory", params=params)
+        response = self.request("get", "https://app4.paypay.ne.jp/bff/v4/getPaymentHistory", params=params)
 
         return response
 
@@ -1142,6 +1158,7 @@ class PayPay():
             },
             "excludeMissionBannerInfoFlag": False,
             "excludeTobaccoPolicyBannerFlag": True,
+            "includeAge": True,
             "includeBeginnerFlag": False,
             "includeSkinInfoFlag": False,
             "networkStatus": "WIFI"
@@ -1168,6 +1185,6 @@ class PayPay():
             ]
         }
 
-        self.request("post", "https://app4.paypay.ne.jp/bff/v1/getFeatureFlagInfo", params=params, json=payload)
+        self.request("post", "https://app4.paypay.ne.jp/bff/v1/getFeatureFlags", params=params, json=payload)
 
         return True
